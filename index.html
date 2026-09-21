@@ -266,8 +266,13 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 
 .leaderboard{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
 .leaderboard li{
-  display:flex;align-items:center;gap:12px;background:var(--bg2);border-radius:14px;padding:10px 14px;
+  display:grid;gap:10px;background:var(--bg2);border-radius:14px;padding:10px 14px;
 }
+.lb-head{display:flex;align-items:center;gap:12px}
+.leaderboard .missed li{background:var(--bg);padding:2px 10px}
+.leaderboard ul.missed li.x2w{background:var(--good);color:var(--ink)}
+.leaderboard ul.missed li.x2w b{color:var(--ink)}
+.leaderboard .missed li.empty-note{background:transparent;padding:0}
 .leaderboard li .rank{
   font-family:var(--serif);font-weight:900;font-size:1.2rem;width:1.6em;text-align:center;color:var(--muted);
 }
@@ -281,14 +286,6 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 
 .x2{background:var(--saffron);color:var(--ink);border-radius:99px;padding:0 6px;font-size:.72rem;font-weight:800;margin-left:4px}
 
-.pw-list{display:grid;gap:14px;margin-top:10px}
-.pw-card{background:var(--bg2);border-radius:14px;padding:12px 14px}
-.pw-card.me{box-shadow:inset 0 0 0 2px var(--saffron)}
-.pw-card h4{margin:0 0 8px;font-size:.95rem;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.pw-card h4 span{color:var(--muted);font-weight:600;font-size:.8rem}
-.pw-card.me h4{color:var(--saffron)}
-.pw-card ul.missed li.x2w{background:var(--good);color:var(--ink)}
-.pw-card ul.missed li.x2w b{color:var(--ink)}
 
 /* ---------- Rivelazione (reveal) ---------- */
 #revealBox{margin:22px 0;padding:16px;background:var(--bg2);border-radius:14px;display:grid;gap:14px}
@@ -428,6 +425,15 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 <div class="overlay" id="over" hidden role="dialog" aria-modal="true" aria-labelledby="overTitle">
   <div class="sheet">
     <h2 id="overTitle">Tempo scaduto</h2>
+    <div id="revealBox" hidden>
+      <h3>Confronto parole in diretta <button class="btn ghost small" id="revealSkip" type="button" hidden>Velocizza per tutti ▶▶</button></h3>
+      <div class="reveal-bars" id="revealBars"></div>
+      <div class="reveal-word">
+        <span class="rw-text" id="revealWordText"></span>
+        <div class="rw-tags" id="revealWordTags"></div>
+      </div>
+      <ul class="reveal-log" id="revealLog"></ul>
+    </div>
     <div class="big" id="overScore">0</div>
     <p id="overRecord"></p>
     <p id="overStats"></p>
@@ -446,19 +452,6 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
       <h3>Classifica</h3>
       <p class="note" id="lbNote"></p>
       <ol class="leaderboard" id="leaderboard"></ol>
-    </div>
-    <div id="revealBox" hidden>
-      <h3>Confronto parole in diretta <button class="btn ghost small" id="revealSkip" type="button" hidden>Velocizza per tutti ▶▶</button></h3>
-      <div class="reveal-bars" id="revealBars"></div>
-      <div class="reveal-word">
-        <span class="rw-text" id="revealWordText"></span>
-        <div class="rw-tags" id="revealWordTags"></div>
-      </div>
-      <ul class="reveal-log" id="revealLog"></ul>
-    </div>
-    <div id="playerWordsBox" hidden>
-      <h3>Le parole di tutti</h3>
-      <div class="pw-list" id="playerWordsList"></div>
     </div>
     <div class="actions">
       <button class="btn" id="againBtn" type="button">Gioca ancora</button>
@@ -925,6 +918,7 @@ function beginRound(){
   S.running = false; S.roundActive = true; S.lastTickSec = null;
 
   $('#setup').hidden = true; $('#lobby').hidden = true; $('#over').hidden = true; $('#game').hidden = false;
+  clearTimeout(revealScheduleId); clearTimeout(revealTimerId); revealFastForward = null;
   $('#revealBox').hidden = true; $('#revealLog').innerHTML = ''; $('#revealBars').innerHTML = '';
   $('#revealWordText').textContent = ''; $('#revealWordText').classList.remove('show'); $('#revealWordTags').innerHTML = '';
   $('#score').textContent = '0';
@@ -1020,13 +1014,12 @@ function endGame(){
     : '<li class="empty-note">Nessuna parola trovata.</li>';
   $('#missedBox').hidden = true;
   $('#lbBox').hidden = true;
-  $('#playerWordsBox').hidden = true;
   updateOverActions();
   $('#over').hidden = false;
   $('#againBtn').focus();
 
   if (dict.ready) setTimeout(showMissed, 50);
-  if (MP.active) mpOnRoundEnd();
+  if (MP.active) mpOnRoundEnd(); else soloOnRoundEnd();
 }
 
 function solveAll(){
@@ -1066,6 +1059,9 @@ const MP = {
   active:false, isHost:false, peer:null, hostConn:null, conns:new Map(),
   code:'', myId:'', myName:'', players:new Map()
 };
+
+const SOLO_ID = 'solo';
+function meId(){ return MP.active ? MP.myId : SOLO_ID; }
 
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1148,7 +1144,7 @@ function handleData(conn, msg){
     } else if (msg.type === 'final'){
       renderLeaderboard(msg.lb, (msg.bonusWords && msg.bonusWords[MP.myId]) || []);
       if (msg.words) renderPlayerWords(msg.lb, msg.words);
-      if (msg.lb && msg.lb.length >= 2 && msg.words) scheduleReveal(msg.words, msg.lb, msg.revealStartAt);
+      if (msg.lb && msg.lb.length >= 1 && msg.words) scheduleReveal(msg.words, msg.lb, msg.revealStartAt);
     } else if (msg.type === 'revealSkip'){
       triggerRevealSkip();
     }
@@ -1206,18 +1202,18 @@ function mpReportWord(word, pts){
   }
 }
 MP.reportWord = mpReportWord;
-function computeFinal(){
+function computeFinal(players = MP.players, solo = false){
   const owners = new Map();
-  for (const [pid, p] of MP.players)
+  for (const [pid, p] of players)
     for (const w of p.words.keys()){
       if (!owners.has(w)) owners.set(w, []);
       owners.get(w).push(pid);
     }
   const bonusWords = {}, lb = [];
-  for (const [pid, p] of MP.players){
+  for (const [pid, p] of players){
     let score = 0; const mine = [];
     for (const [w, pts] of p.words){
-      const uniq = owners.get(w).length === 1;
+      const uniq = !solo && owners.get(w).length === 1;
       score += uniq ? pts * 2 : pts;
       if (uniq) mine.push(w);
     }
@@ -1227,17 +1223,17 @@ function computeFinal(){
   lb.sort((a, b) => b.score - a.score);
   const words = [...owners.keys()].sort().map(w => {
     const ids = owners.get(w);
-    return { word: w, uniq: ids.length === 1, entries: ids.map(id => ({ id, pts: MP.players.get(id).words.get(w) })) };
+    return { word: w, uniq: !solo && ids.length === 1, entries: ids.map(id => ({ id, pts: players.get(id).words.get(w) })) };
   });
   return { lb, bonusWords, words };
 }
 function renderLeaderboard(lb, myBonusWords){
   $('#lbBox').hidden = false;
-  $('#lbNote').textContent = 'Le parole trovate da un solo giocatore valgono doppio.';
+  $('#lbNote').textContent = MP.active ? 'Le parole trovate da un solo giocatore valgono doppio.' : '';
   $('#leaderboard').innerHTML = lb.map((p, i) =>
-    `<li class="${p.id === MP.myId ? 'me' : ''}"><span class="rank">${i + 1}</span>` +
+    `<li class="${p.id === meId() ? 'me' : ''}"><div class="lb-head"><span class="rank">${i + 1}</span>` +
     `<span class="nm">${escapeHtml(p.name)}<span class="sub">${p.wordCount} parole</span></span>` +
-    `<span class="pt">${p.score}</span></li>`).join('');
+    `<span class="pt">${p.score}</span></div></li>`).join('');
   const set = new Set(myBonusWords || []);
   if (set.size){
     document.querySelectorAll('#overFound li').forEach(li => {
@@ -1249,7 +1245,7 @@ function renderLeaderboard(lb, myBonusWords){
 
 /* ---- animazione di rivelazione (stile Ruzzle Party) ---- */
 const REVEAL_STEP_MS = 2500;
-let revealTimerId = null, revealSkip = false, revealBaseAt = 0;
+let revealTimerId = null, revealSkip = false, revealBaseAt = 0, revealFastForward = null;
 function startReveal(words, lb, baseAt){
   revealSkip = false; clearTimeout(revealTimerId);
   revealBaseAt = baseAt || Date.now();
@@ -1266,7 +1262,7 @@ function startReveal(words, lb, baseAt){
   $('#revealWordText').textContent = ''; $('#revealWordText').classList.remove('show');
   $('#revealWordTags').innerHTML = '';
   $('#revealBox').hidden = false;
-  $('#revealSkip').hidden = !(MP.isHost && lb.length >= 2);
+  $('#revealSkip').hidden = !(MP.isHost || !MP.active);
 
   let i = 0;
   function finish(){
@@ -1278,13 +1274,13 @@ function startReveal(words, lb, baseAt){
     $('#revealWordText').classList.remove('show');
     $('#revealSkip').hidden = true;
   }
-  function step(){
-    if (revealSkip || i >= words.length){ finish(); return; }
-    const w = words[i++];
-    $('#revealWordText').textContent = w.word;
-    $('#revealWordText').classList.remove('show'); void $('#revealWordText').offsetWidth; $('#revealWordText').classList.add('show');
-    $('#revealWordTags').innerHTML = w.entries.map(e =>
-      `<span class="${e.id === MP.myId ? 'mine' : ''}${w.uniq ? ' x2b' : ''}">${escapeHtml(names.get(e.id) || '?')} +${w.uniq ? e.pts * 2 : e.pts}${w.uniq ? ' ×2' : ''}</span>`).join('');
+  function applyWord(w, animate){
+    if (animate){
+      $('#revealWordText').textContent = w.word;
+      $('#revealWordText').classList.remove('show'); void $('#revealWordText').offsetWidth; $('#revealWordText').classList.add('show');
+      $('#revealWordTags').innerHTML = w.entries.map(e =>
+        `<span class="${e.id === meId() ? 'mine' : ''}${w.uniq ? ' x2b' : ''}">${escapeHtml(names.get(e.id) || '?')} +${w.uniq ? e.pts * 2 : e.pts}${w.uniq ? ' ×2' : ''}</span>`).join('');
+    }
     for (const e of w.entries){
       const add = w.uniq ? e.pts * 2 : e.pts;
       running.set(e.id, (running.get(e.id) || 0) + add);
@@ -1296,8 +1292,19 @@ function startReveal(words, lb, baseAt){
     const tot = w.entries.reduce((s, e) => s + (w.uniq ? e.pts * 2 : e.pts), 0);
     li.innerHTML = `${w.word}<b>+${tot}</b>`;
     $('#revealLog').insertBefore(li, $('#revealLog').firstChild);
-    Snd.beep(false);
-    if (revealSkip || i >= words.length){ finish(); return; }
+    if (animate) Snd.beep(false);
+  }
+  revealFastForward = function(){
+    clearTimeout(revealTimerId);
+    while (i < words.length) applyWord(words[i++], false);
+    $('#revealWordTags').innerHTML = '';
+    finish();
+  };
+  function step(){
+    if (revealSkip){ return; }
+    if (i >= words.length){ finish(); return; }
+    applyWord(words[i++], true);
+    if (i >= words.length){ finish(); return; }
     const wait = Math.max(0, revealBaseAt + i * REVEAL_STEP_MS - Date.now());
     revealTimerId = setTimeout(step, wait);
   }
@@ -1306,14 +1313,14 @@ function startReveal(words, lb, baseAt){
 function triggerRevealSkip(){
   revealSkip = true;
   clearTimeout(revealTimerId);
+  if (revealFastForward) revealFastForward();
   const wordText = $('#revealWordText');
   if (wordText) wordText.classList.remove('show');
   $('#revealSkip').hidden = true;
 }
 function renderPlayerWords(lb, words){
-  const box = $('#playerWordsBox');
-  if (!lb || lb.length < 2){ box.hidden = true; return; }
-  box.hidden = false;
+  if (!lb || !lb.length) return;
+  const rows = document.querySelectorAll('#leaderboard li');
   const byPlayer = new Map(lb.map(p => [p.id, []]));
   for (const w of words){
     for (const e of w.entries){
@@ -1321,14 +1328,24 @@ function renderPlayerWords(lb, words){
       if (arr) arr.push({ word: w.word, pts: w.uniq ? e.pts * 2 : e.pts, uniq: w.uniq });
     }
   }
-  $('#playerWordsList').innerHTML = lb.map(p => {
+  lb.forEach((p, i) => {
+    const li = rows[i]; if (!li) return;
+    const old = li.querySelector('ul.missed'); if (old) old.remove();
     const arr = (byPlayer.get(p.id) || []).sort((a, b) => b.word.length - a.word.length || b.pts - a.pts);
     const items = arr.length
       ? arr.map(x => `<li${x.uniq ? ' class="x2w"' : ''}>${escapeHtml(x.word)}<b>${x.pts}${x.uniq ? ' ×2' : ''}</b></li>`).join('')
       : '<li class="empty-note">Nessuna parola trovata.</li>';
-    return `<div class="pw-card${p.id === MP.myId ? ' me' : ''}"><h4>${escapeHtml(p.name)}<span>${arr.length} parole · ${p.score} pt</span></h4>` +
-      `<ul class="missed">${items}</ul></div>`;
-  }).join('');
+    li.insertAdjacentHTML('beforeend', `<ul class="missed">${items}</ul>`);
+  });
+}
+function soloOnRoundEnd(){
+  const name = ($('#nickInput').value || '').trim().slice(0, 16) || 'Tu';
+  const players = new Map([[SOLO_ID, { name, words: new Map(S.found) }]]);
+  const { lb, bonusWords, words } = computeFinal(players, true);
+  const revealStartAt = Date.now() + 700;
+  renderLeaderboard(lb, bonusWords[SOLO_ID]);
+  renderPlayerWords(lb, words);
+  if (words.length) scheduleReveal(words, lb, revealStartAt);
 }
 function mpOnRoundEnd(){
   if (MP.isHost){
@@ -1337,17 +1354,18 @@ function mpOnRoundEnd(){
     for (const conn of MP.conns.values()) conn.send({ type:'final', lb, bonusWords, words, revealStartAt });
     renderLeaderboard(lb, bonusWords[MP.myId]);
     renderPlayerWords(lb, words);
-    if (lb.length >= 2) scheduleReveal(words, lb, revealStartAt);
+    if (lb.length >= 1) scheduleReveal(words, lb, revealStartAt);
   } else {
     $('#lbBox').hidden = false;
     $('#lbNote').textContent = "In attesa dei punteggi finali dall'host…";
     $('#leaderboard').innerHTML = '';
-    $('#playerWordsBox').hidden = true;
   }
 }
+let revealScheduleId = null;
 function scheduleReveal(words, lb, at){
   const wait = Math.max(0, (at || Date.now()) - Date.now());
-  setTimeout(() => startReveal(words, lb, at || Date.now()), wait);
+  clearTimeout(revealScheduleId);
+  revealScheduleId = setTimeout(() => startReveal(words, lb, at || Date.now()), wait);
 }
 function updateOverActions(){
   const again = $('#againBtn'), menu = $('#menuBtn');
@@ -1374,7 +1392,7 @@ $('#muteBtn').addEventListener('click', () => {
   $('#muteBtn').setAttribute('aria-pressed', m ? 'true' : 'false');
 });
 $('#revealSkip').addEventListener('click', () => {
-  if (!MP.isHost) return;
+  if (MP.active && !MP.isHost) return;
   for (const conn of MP.conns.values()) conn.send({ type:'revealSkip' });
   triggerRevealSkip();
 });
