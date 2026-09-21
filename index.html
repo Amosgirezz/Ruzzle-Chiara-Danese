@@ -1074,21 +1074,59 @@ function genCode(){
 function setMpNote(t){ $('#mpNote').textContent = t || ''; }
 function setLobbyErr(t){ const e = $('#lobbyErr'); e.textContent = t || ''; e.hidden = !t; }
 
+/* Config ICE: oltre agli STUN pubblici, includiamo un TURN gratuito (OpenRelay)
+   così la connessione P2P riesce anche quando uno dei due dispositivi è dietro
+   NAT restrittivo / firewall e il solo STUN non basta. */
+const ICE_CONFIG = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    }
+  ]
+};
+const MP_CONNECT_TIMEOUT_MS = 12000;
+let mpConnectTimer = null;
+function clearMpConnectTimer(){ clearTimeout(mpConnectTimer); mpConnectTimer = null; }
+function destroyMpPeer(){
+  clearMpConnectTimer();
+  if (MP.peer){ try { MP.peer.destroy(); } catch(e){} }
+  MP.peer = null;
+}
+
 function createLobby(){
   if (typeof Peer === 'undefined'){ setMpNote('Rete non disponibile: ricarica la pagina.'); return; }
   const name = ($('#nickInput').value || '').trim().slice(0, 16) || 'Host';
   storeSet('intreccio:nick', name);
   MP.myName = name; MP.isHost = true; MP.code = genCode();
   setMpNote('Creo la lobby…');
-  const peer = new Peer('intr-' + MP.code, { debug: 0 });
+  const peer = new Peer('intr-' + MP.code, { debug: 0, config: ICE_CONFIG });
   MP.peer = peer;
+  clearMpConnectTimer();
+  mpConnectTimer = setTimeout(() => {
+    if (!MP.active){ setMpNote('Impossibile creare la lobby: rete troppo lenta o bloccata. Riprova.'); destroyMpPeer(); }
+  }, MP_CONNECT_TIMEOUT_MS);
   peer.on('open', id => {
+    clearMpConnectTimer();
     MP.myId = id; MP.active = true;
     MP.players = new Map([[id, { name, words: new Map() }]]);
     setMpNote(''); showLobby();
   });
   peer.on('connection', conn => setupHostConn(conn));
-  peer.on('error', () => setMpNote('Impossibile creare la lobby: riprova.'));
+  peer.on('error', () => { clearMpConnectTimer(); setMpNote('Impossibile creare la lobby: riprova.'); });
 }
 function joinLobby(){
   if (typeof Peer === 'undefined'){ setMpNote('Rete non disponibile: ricarica la pagina.'); return; }
@@ -1098,21 +1136,32 @@ function joinLobby(){
   storeSet('intreccio:nick', name);
   MP.myName = name; MP.isHost = false; MP.code = code;
   setMpNote('Mi connetto alla lobby…');
-  const peer = new Peer(undefined, { debug: 0 });
+  const peer = new Peer(undefined, { debug: 0, config: ICE_CONFIG });
   MP.peer = peer;
+  clearMpConnectTimer();
+  mpConnectTimer = setTimeout(() => {
+    if (!MP.active){
+      setMpNote('Impossibile connettersi alla lobby: rete troppo lenta o bloccata. Riprova.');
+      destroyMpPeer();
+    }
+  }, MP_CONNECT_TIMEOUT_MS);
   peer.on('open', id => {
     MP.myId = id;
     const conn = peer.connect('intr-' + code, { reliable: true });
     MP.hostConn = conn;
     conn.on('open', () => {
+      clearMpConnectTimer();
       MP.active = true; setMpNote('');
       conn.send({ type: 'hello', name });
       showLobby();
     });
     conn.on('data', data => handleData(conn, data));
     conn.on('close', () => setLobbyErr("Connessione con l'host interrotta."));
+    conn.on('error', () => {
+      if (!MP.active){ clearMpConnectTimer(); setMpNote('Impossibile connettersi alla lobby: riprova.'); destroyMpPeer(); }
+    });
   });
-  peer.on('error', () => setMpNote('Lobby non trovata: controlla il codice.'));
+  peer.on('error', () => { clearMpConnectTimer(); setMpNote('Lobby non trovata: controlla il codice.'); });
 }
 function setupHostConn(conn){
   conn.on('data', data => handleData(conn, data));
