@@ -171,6 +171,17 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 .ribbon polyline{fill:none;stroke:rgba(13,27,30,.42);stroke-linecap:round;stroke-linejoin:round}
 .board.shake{animation:shake .32s}
 @keyframes shake{20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.board-count{
+  position:absolute;inset:0;display:grid;place-items:center;z-index:6;
+  background:rgba(16,38,43,.85);border-radius:22px;backdrop-filter:blur(1px);
+}
+.board-count span{
+  font-family:var(--serif);font-weight:900;color:var(--saffron);
+  font-size:clamp(64px,26cqw,140px);line-height:1;
+  animation:cd-pop .5s cubic-bezier(.2,.8,.3,1);
+}
+.board-count span.go{color:var(--good);font-size:clamp(36px,12cqw,64px)}
+@keyframes cd-pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
 .board.pop{animation:pop .2s}
 @keyframes pop{50%{transform:scale(1.015)}}
 
@@ -270,11 +281,18 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 
 .x2{background:var(--saffron);color:var(--ink);border-radius:99px;padding:0 6px;font-size:.72rem;font-weight:800;margin-left:4px}
 
+.pw-list{display:grid;gap:14px;margin-top:10px}
+.pw-card{background:var(--bg2);border-radius:14px;padding:12px 14px}
+.pw-card.me{box-shadow:inset 0 0 0 2px var(--saffron)}
+.pw-card h4{margin:0 0 8px;font-size:.95rem;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.pw-card h4 span{color:var(--muted);font-weight:600;font-size:.8rem}
+.pw-card.me h4{color:var(--saffron)}
+.pw-card ul.missed li.x2w{background:var(--good);color:var(--ink)}
+.pw-card ul.missed li.x2w b{color:var(--ink)}
+
 /* ---------- Rivelazione (reveal) ---------- */
-.reveal-ov{z-index:21}
-.reveal-sheet{display:flex;flex-direction:column;gap:18px}
-.reveal-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.reveal-head h2{font-family:var(--serif);font-weight:900;font-size:1.6rem;margin:0}
+#revealBox{margin:22px 0;padding:16px;background:var(--bg2);border-radius:14px;display:grid;gap:14px}
+#revealBox h3{margin:0;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .reveal-bars{display:grid;gap:12px}
 .rb-row{display:grid;gap:5px}
 .rb-top{display:flex;justify-content:space-between;align-items:baseline;font-weight:700}
@@ -325,6 +343,14 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
       <label><input type="radio" name="time" value="180"><span>180<small>secondi</small></span></label>
     </fieldset>
 
+    <fieldset class="seg" id="minLenSeg" style="grid-template-columns:repeat(4,1fr)">
+      <legend>Lunghezza minima parole</legend>
+      <label><input type="radio" name="minLen" value="3" checked><span>3<small>lettere</small></span></label>
+      <label><input type="radio" name="minLen" value="4"><span>4<small>lettere</small></span></label>
+      <label><input type="radio" name="minLen" value="5"><span>5<small>lettere</small></span></label>
+      <label><input type="radio" name="minLen" value="6"><span>6<small>lettere</small></span></label>
+    </fieldset>
+
     <div class="start-row">
       <button class="btn" id="startBtn" type="button" disabled>Caricamento…</button>
       <span id="recordLine" class="note"></span>
@@ -339,7 +365,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
     <ul class="rules">
       <li><b>Punteggio:</b> ogni lettera ha un valore (A=1, C=2, M=3, B=5, Z=8…). Le parole lunghe danno un bonus.</li>
       <li><b>Caselle speciali:</b> <span class="chip dl">2L</span> raddoppia la lettera, <span class="chip tl">3L</span> la triplica, <span class="chip dw">2P</span> raddoppia la parola.</li>
-      <li><b>Regole:</b> le parole di 1 o 2 lettere non contano. Ogni parola vale una sola volta.</li>
+      <li><b>Regole:</b> le parole più corte della lunghezza minima scelta non contano. Ogni parola vale una sola volta.</li>
       <li><b>Comandi:</b> trascina il dito o il mouse sulle lettere. Su computer puoi anche digitare la parola e premere Invio.</li>
     </ul>
 
@@ -385,7 +411,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
       <div class="bar" id="bar" style="margin:12px 0 6px"><i id="barFill"></i></div>
       <div class="current" aria-live="polite"><span class="cw hint" id="curWord"></span><span class="cp" id="curPts"></span></div>
       <div class="board-wrap">
-        <div class="board" id="board"><div class="grid" id="grid"></div></div>
+        <div class="board" id="board"><div class="grid" id="grid"></div><div class="board-count" id="boardCount" hidden><span id="boardCountNum">3</span></div></div>
       </div>
       <div class="msg" id="msg" aria-live="polite"></div>
       <p class="note warn" id="permNote" hidden>Dizionario non disponibile: le parole plausibili vengono accettate sulla fiducia.</p>
@@ -397,22 +423,6 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
     </aside>
   </section>
 </main>
-
-<!-- Rivelazione parole (multigiocatore) -->
-<div class="overlay reveal-ov" id="reveal" hidden role="dialog" aria-modal="true" aria-label="Confronto parole">
-  <div class="sheet reveal-sheet">
-    <div class="reveal-head">
-      <h2>Confronto parole</h2>
-      <button class="btn ghost small" id="revealSkip" type="button">Salta ▶▶</button>
-    </div>
-    <div class="reveal-bars" id="revealBars"></div>
-    <div class="reveal-word">
-      <span class="rw-text" id="revealWordText"></span>
-      <div class="rw-tags" id="revealWordTags"></div>
-    </div>
-    <ul class="reveal-log" id="revealLog"></ul>
-  </div>
-</div>
 
 <!-- Fine partita -->
 <div class="overlay" id="over" hidden role="dialog" aria-modal="true" aria-labelledby="overTitle">
@@ -436,6 +446,19 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
       <h3>Classifica</h3>
       <p class="note" id="lbNote"></p>
       <ol class="leaderboard" id="leaderboard"></ol>
+    </div>
+    <div id="revealBox" hidden>
+      <h3>Confronto parole in diretta <button class="btn ghost small" id="revealSkip" type="button" hidden>Velocizza per tutti ▶▶</button></h3>
+      <div class="reveal-bars" id="revealBars"></div>
+      <div class="reveal-word">
+        <span class="rw-text" id="revealWordText"></span>
+        <div class="rw-tags" id="revealWordTags"></div>
+      </div>
+      <ul class="reveal-log" id="revealLog"></ul>
+    </div>
+    <div id="playerWordsBox" hidden>
+      <h3>Le parole di tutti</h3>
+      <div class="pw-list" id="playerWordsList"></div>
     </div>
     <div class="actions">
       <button class="btn" id="againBtn" type="button">Gioca ancora</button>
@@ -465,10 +488,11 @@ const BONUS_LABEL = {DL:'2L', TL:'3L', DW:'2P'};
 const LEN_BONUS = {5:3, 6:6, 7:10, 8:15};
 
 const S = {
-  n:4, time:120, grid:[], bonus:[], path:[], typed:'',
-  found:new Map(), score:0, endAt:0, running:false, dragging:false,
-  timer:null, rects:[], NB:[], lastTickSec:null
+  n:4, time:120, minLen:3, grid:[], bonus:[], path:[], typed:'',
+  found:new Map(), score:0, startAt:0, endAt:0, running:false, dragging:false,
+  timer:null, countdownTimer:null, rects:[], NB:[], lastTickSec:null
 };
+const COUNTDOWN_MS = 3000;
 
 /* ---------------- Suoni ---------------- */
 const Snd = (() => {
@@ -763,7 +787,7 @@ function animate(cls){
 function submitPath(path){
   if (!path || !path.length) return;
   const word = pathWord(path);
-  if (word.length < MIN_LEN){ toast('Servono almeno 3 lettere', 'bad'); return; }
+  if (word.length < S.minLen){ toast(`Servono almeno ${S.minLen} lettere`, 'bad'); return; }
   if (S.found.has(word)){ toast('Parola già trovata', 'bad'); return; }
   if (!isValidWord(word)){ toast(word + ': parola non valida', 'bad'); return; }
   const pts = scorePath(path);
@@ -872,11 +896,12 @@ const fmt = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 
 function storeGet(k){ try { return localStorage.getItem(k); } catch (e) { return null; } }
 function storeSet(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
-const recKey = () => `intreccio:${S.n}:${S.time}`;
+const recKey = () => `intreccio:${S.n}:${S.time}:${S.minLen}`;
 
 function readSettings(){
   S.n = +document.querySelector('input[name=size]:checked').value;
   S.time = +document.querySelector('input[name=time]:checked').value;
+  S.minLen = +document.querySelector('input[name=minLen]:checked').value;
 }
 function showRecord(){
   readSettings();
@@ -886,27 +911,61 @@ function showRecord(){
 
 function startGame(){
   readSettings();
-  storeSet('intreccio:settings', JSON.stringify({ n: S.n, time: S.time }));
+  storeSet('intreccio:settings', JSON.stringify({ n: S.n, time: S.time, minLen: S.minLen }));
   S.NB = buildNeighbors(S.n);
   S.grid = genGrid(S.n); S.bonus = genBonus(S.n);
-  S.endAt = Date.now() + S.time * 1000;
+  S.startAt = Date.now() + COUNTDOWN_MS;
+  S.endAt = S.startAt + S.time * 1000;
   Snd.unlock();
   if (MP.active && MP.isHost) broadcastStart();
   beginRound();
 }
 function beginRound(){
   S.path = []; S.typed = ''; S.found = new Map(); S.score = 0; S.dragging = false;
-  S.running = true; S.lastTickSec = null;
+  S.running = false; S.roundActive = true; S.lastTickSec = null;
 
-  $('#setup').hidden = true; $('#lobby').hidden = true; $('#over').hidden = true; $('#reveal').hidden = true; $('#game').hidden = false;
+  $('#setup').hidden = true; $('#lobby').hidden = true; $('#over').hidden = true; $('#game').hidden = false;
+  $('#revealBox').hidden = true; $('#revealLog').innerHTML = ''; $('#revealBars').innerHTML = '';
+  $('#revealWordText').textContent = ''; $('#revealWordText').classList.remove('show'); $('#revealWordTags').innerHTML = '';
   $('#score').textContent = '0';
   $('#found').innerHTML = ''; $('#foundEmpty').hidden = false; $('#foundCount').textContent = '0';
   $('#msg').textContent = '';
   $('#permNote').hidden = dict.ready;
+  $('#timeVal').textContent = fmt(S.time);
+  $('#barFill').style.width = '100%';
+  $('#timeBox').classList.remove('low'); $('#bar').classList.remove('low');
   if (MP.active) mpResetRound();
   renderBoard();
-  tick();
-  clearInterval(S.timer); S.timer = setInterval(tick, 100);
+  clearInterval(S.timer); clearInterval(S.countdownTimer);
+  startCountdown();
+}
+function startCountdown(){
+  const box = $('#boardCount'), num = $('#boardCountNum');
+  box.hidden = false;
+  let shown = null;
+  function upd(){
+    const remain = S.startAt - Date.now();
+    if (remain <= 250){
+      clearInterval(S.countdownTimer);
+      num.textContent = 'Via!'; num.className = 'go';
+      setTimeout(() => {
+        box.hidden = true;
+        S.running = true; S.lastTickSec = null;
+        tick();
+        clearInterval(S.timer); S.timer = setInterval(tick, 100);
+      }, remain > 0 ? remain : 0);
+      return;
+    }
+    const n = Math.ceil(remain / 1000);
+    if (n !== shown){
+      shown = n;
+      num.textContent = String(n); num.className = '';
+      void num.offsetWidth; num.style.animation = 'none'; void num.offsetWidth; num.style.animation = '';
+      Snd.beep(n <= 1);
+    }
+  }
+  upd();
+  S.countdownTimer = setInterval(upd, 100);
 }
 function tick(){
   const ms = Math.max(0, S.endAt - Date.now());
@@ -934,8 +993,9 @@ function renderBoardRef(){
 }
 
 function endGame(){
-  if (!S.running) return;
-  S.running = false; clearInterval(S.timer);
+  if (!S.roundActive) return;
+  S.roundActive = false; S.running = false; clearInterval(S.timer); clearInterval(S.countdownTimer);
+  $('#boardCount').hidden = true;
   S.dragging = false; S.path = []; S.typed = ''; updatePathUI();
   Snd.buzz();
 
@@ -960,6 +1020,7 @@ function endGame(){
     : '<li class="empty-note">Nessuna parola trovata.</li>';
   $('#missedBox').hidden = true;
   $('#lbBox').hidden = true;
+  $('#playerWordsBox').hidden = true;
   updateOverActions();
   $('#over').hidden = false;
   $('#againBtn').focus();
@@ -973,7 +1034,7 @@ function solveAll(){
   const t0 = performance.now();
   (function rec(str, from){
     if (performance.now() - t0 > 2500) return;
-    if (str.length >= MIN_LEN && dict.set.has(str)){
+    if (str.length >= S.minLen && dict.set.has(str)){
       const sc = scorePath(cur);
       if (!(res.get(str) >= sc)) res.set(str, sc);
     }
@@ -1086,7 +1147,10 @@ function handleData(conn, msg){
       startFromNetwork(msg);
     } else if (msg.type === 'final'){
       renderLeaderboard(msg.lb, (msg.bonusWords && msg.bonusWords[MP.myId]) || []);
+      if (msg.words) renderPlayerWords(msg.lb, msg.words);
       if (msg.lb && msg.lb.length >= 2 && msg.words) scheduleReveal(msg.words, msg.lb, msg.revealStartAt);
+    } else if (msg.type === 'revealSkip'){
+      triggerRevealSkip();
     }
   }
 }
@@ -1122,10 +1186,11 @@ function leaveLobby(){
 }
 function broadcastStart(){
   for (const conn of MP.conns.values())
-    conn.send({ type:'start', n:S.n, time:S.time, grid:S.grid, bonus:S.bonus, endAt:S.endAt });
+    conn.send({ type:'start', n:S.n, time:S.time, minLen:S.minLen, grid:S.grid, bonus:S.bonus, startAt:S.startAt, endAt:S.endAt });
 }
 function startFromNetwork(msg){
-  S.n = msg.n; S.time = msg.time; S.grid = msg.grid; S.bonus = msg.bonus; S.endAt = msg.endAt;
+  S.n = msg.n; S.time = msg.time; S.minLen = msg.minLen || 3; S.grid = msg.grid; S.bonus = msg.bonus;
+  S.startAt = msg.startAt || Date.now(); S.endAt = msg.endAt;
   S.NB = buildNeighbors(S.n);
   beginRound();
 }
@@ -1183,9 +1248,11 @@ function renderLeaderboard(lb, myBonusWords){
 }
 
 /* ---- animazione di rivelazione (stile Ruzzle Party) ---- */
-let revealStepFn = null, revealTimerId = null, revealSkip = false;
-function startReveal(words, lb){
+const REVEAL_STEP_MS = 2500;
+let revealTimerId = null, revealSkip = false, revealBaseAt = 0;
+function startReveal(words, lb, baseAt){
   revealSkip = false; clearTimeout(revealTimerId);
+  revealBaseAt = baseAt || Date.now();
   const order = lb.map(p => p.id);
   const names = new Map(lb.map(p => [p.id, p.name]));
   const running = new Map(order.map(id => [id, 0]));
@@ -1198,7 +1265,8 @@ function startReveal(words, lb){
   $('#revealLog').innerHTML = '';
   $('#revealWordText').textContent = ''; $('#revealWordText').classList.remove('show');
   $('#revealWordTags').innerHTML = '';
-  $('#reveal').hidden = false;
+  $('#revealBox').hidden = false;
+  $('#revealSkip').hidden = !(MP.isHost && lb.length >= 2);
 
   let i = 0;
   function finish(){
@@ -1208,7 +1276,7 @@ function startReveal(words, lb){
       if (sc) sc.textContent = p.score;
     }
     $('#revealWordText').classList.remove('show');
-    setTimeout(() => { $('#reveal').hidden = true; $('#over').hidden = false; }, revealSkip ? 120 : 450);
+    $('#revealSkip').hidden = true;
   }
   function step(){
     if (revealSkip || i >= words.length){ finish(); return; }
@@ -1229,10 +1297,38 @@ function startReveal(words, lb){
     li.innerHTML = `${w.word}<b>+${tot}</b>`;
     $('#revealLog').insertBefore(li, $('#revealLog').firstChild);
     Snd.beep(false);
-    revealTimerId = setTimeout(step, 550);
+    if (revealSkip || i >= words.length){ finish(); return; }
+    const wait = Math.max(0, revealBaseAt + i * REVEAL_STEP_MS - Date.now());
+    revealTimerId = setTimeout(step, wait);
   }
-  revealStepFn = step;
   step();
+}
+function triggerRevealSkip(){
+  revealSkip = true;
+  clearTimeout(revealTimerId);
+  const wordText = $('#revealWordText');
+  if (wordText) wordText.classList.remove('show');
+  $('#revealSkip').hidden = true;
+}
+function renderPlayerWords(lb, words){
+  const box = $('#playerWordsBox');
+  if (!lb || lb.length < 2){ box.hidden = true; return; }
+  box.hidden = false;
+  const byPlayer = new Map(lb.map(p => [p.id, []]));
+  for (const w of words){
+    for (const e of w.entries){
+      const arr = byPlayer.get(e.id);
+      if (arr) arr.push({ word: w.word, pts: w.uniq ? e.pts * 2 : e.pts, uniq: w.uniq });
+    }
+  }
+  $('#playerWordsList').innerHTML = lb.map(p => {
+    const arr = (byPlayer.get(p.id) || []).sort((a, b) => b.word.length - a.word.length || b.pts - a.pts);
+    const items = arr.length
+      ? arr.map(x => `<li${x.uniq ? ' class="x2w"' : ''}>${escapeHtml(x.word)}<b>${x.pts}${x.uniq ? ' ×2' : ''}</b></li>`).join('')
+      : '<li class="empty-note">Nessuna parola trovata.</li>';
+    return `<div class="pw-card${p.id === MP.myId ? ' me' : ''}"><h4>${escapeHtml(p.name)}<span>${arr.length} parole · ${p.score} pt</span></h4>` +
+      `<ul class="missed">${items}</ul></div>`;
+  }).join('');
 }
 function mpOnRoundEnd(){
   if (MP.isHost){
@@ -1240,16 +1336,18 @@ function mpOnRoundEnd(){
     const revealStartAt = Date.now() + 700;
     for (const conn of MP.conns.values()) conn.send({ type:'final', lb, bonusWords, words, revealStartAt });
     renderLeaderboard(lb, bonusWords[MP.myId]);
+    renderPlayerWords(lb, words);
     if (lb.length >= 2) scheduleReveal(words, lb, revealStartAt);
   } else {
     $('#lbBox').hidden = false;
     $('#lbNote').textContent = "In attesa dei punteggi finali dall'host…";
     $('#leaderboard').innerHTML = '';
+    $('#playerWordsBox').hidden = true;
   }
 }
 function scheduleReveal(words, lb, at){
   const wait = Math.max(0, (at || Date.now()) - Date.now());
-  setTimeout(() => startReveal(words, lb), wait);
+  setTimeout(() => startReveal(words, lb, at || Date.now()), wait);
 }
 function updateOverActions(){
   const again = $('#againBtn'), menu = $('#menuBtn');
@@ -1269,17 +1367,18 @@ $('#menuBtn').addEventListener('click', () => {
   if (MP.active){ $('#lobby').hidden = false; renderLobbyPlayers(); }
   else { $('#setup').hidden = false; showRecord(); }
 });
-$('#quitBtn').addEventListener('click', () => { if (S.running) endGame(); });
+$('#quitBtn').addEventListener('click', () => { if (S.roundActive) endGame(); });
 $('#muteBtn').addEventListener('click', () => {
   const m = Snd.toggleMute();
   $('#muteBtn').textContent = m ? '🔇' : '🔊';
   $('#muteBtn').setAttribute('aria-pressed', m ? 'true' : 'false');
 });
 $('#revealSkip').addEventListener('click', () => {
-  if (!revealStepFn) return;
-  revealSkip = true; clearTimeout(revealTimerId); revealStepFn();
+  if (!MP.isHost) return;
+  for (const conn of MP.conns.values()) conn.send({ type:'revealSkip' });
+  triggerRevealSkip();
 });
-document.querySelectorAll('input[name=size],input[name=time]').forEach(i => i.addEventListener('change', showRecord));
+document.querySelectorAll('input[name=size],input[name=time],input[name=minLen]').forEach(i => i.addEventListener('change', showRecord));
 $('#loadFileBtn').addEventListener('click', () => $('#dictFile').click());
 $('#dictFile').addEventListener('change', async e => {
   const f = e.target.files[0]; if (!f) return;
@@ -1296,7 +1395,8 @@ $('#dictFile').addEventListener('change', async e => {
     if (s){
       const a = document.querySelector(`input[name=size][value="${s.n}"]`);
       const b = document.querySelector(`input[name=time][value="${s.time}"]`);
-      if (a) a.checked = true; if (b) b.checked = true;
+      const c = document.querySelector(`input[name=minLen][value="${s.minLen}"]`);
+      if (a) a.checked = true; if (b) b.checked = true; if (c) c.checked = true;
     }
     const nick = storeGet('intreccio:nick');
     if (nick) $('#nickInput').value = nick;
