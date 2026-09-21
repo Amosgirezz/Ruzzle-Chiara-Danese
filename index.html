@@ -270,6 +270,34 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 
 .x2{background:var(--saffron);color:var(--ink);border-radius:99px;padding:0 6px;font-size:.72rem;font-weight:800;margin-left:4px}
 
+/* ---------- Rivelazione (reveal) ---------- */
+.reveal-ov{z-index:21}
+.reveal-sheet{display:flex;flex-direction:column;gap:18px}
+.reveal-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.reveal-head h2{font-family:var(--serif);font-weight:900;font-size:1.6rem;margin:0}
+.reveal-bars{display:grid;gap:12px}
+.rb-row{display:grid;gap:5px}
+.rb-top{display:flex;justify-content:space-between;align-items:baseline;font-weight:700}
+.rb-top .rb-score{font-family:var(--serif);font-weight:900;font-size:1.3rem;color:var(--saffron);font-variant-numeric:tabular-nums}
+.rb-track{height:16px;background:var(--bg2);border-radius:99px;overflow:hidden}
+.rb-fill{height:100%;width:0%;border-radius:99px;background:var(--saffron);transition:width .35s cubic-bezier(.2,.8,.3,1)}
+.rb-row.p2 .rb-fill{background:var(--sky)}
+.rb-row.p3 .rb-fill{background:var(--coral)}
+.rb-row.p4 .rb-fill{background:var(--good)}
+.reveal-word{min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
+.rw-text{
+  font-family:var(--serif);font-weight:900;font-size:clamp(30px,8vw,52px);letter-spacing:.03em;
+  opacity:0;transform:translateY(10px) scale(.9);transition:opacity .16s,transform .16s;
+}
+.rw-text.show{opacity:1;transform:translateY(0) scale(1)}
+.rw-tags{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;min-height:26px}
+.rw-tags span{background:var(--bg2);border-radius:99px;padding:3px 12px;font-size:.82rem;font-weight:700}
+.rw-tags span.mine{background:var(--good);color:var(--ink)}
+.rw-tags span.x2b{box-shadow:0 0 0 2px var(--saffron) inset}
+.reveal-log{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px;max-height:24dvh;overflow:auto;justify-content:center}
+.reveal-log li{background:var(--bg2);border-radius:99px;padding:2px 10px;font-size:.8rem;opacity:.85}
+.reveal-log li b{color:var(--saffron);margin-left:4px}
+
 @media (prefers-reduced-motion:reduce){
   *{animation:none !important;transition:none !important}
 }
@@ -369,6 +397,22 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
     </aside>
   </section>
 </main>
+
+<!-- Rivelazione parole (multigiocatore) -->
+<div class="overlay reveal-ov" id="reveal" hidden role="dialog" aria-modal="true" aria-label="Confronto parole">
+  <div class="sheet reveal-sheet">
+    <div class="reveal-head">
+      <h2>Confronto parole</h2>
+      <button class="btn ghost small" id="revealSkip" type="button">Salta ▶▶</button>
+    </div>
+    <div class="reveal-bars" id="revealBars"></div>
+    <div class="reveal-word">
+      <span class="rw-text" id="revealWordText"></span>
+      <div class="rw-tags" id="revealWordTags"></div>
+    </div>
+    <ul class="reveal-log" id="revealLog"></ul>
+  </div>
+</div>
 
 <!-- Fine partita -->
 <div class="overlay" id="over" hidden role="dialog" aria-modal="true" aria-labelledby="overTitle">
@@ -854,7 +898,7 @@ function beginRound(){
   S.path = []; S.typed = ''; S.found = new Map(); S.score = 0; S.dragging = false;
   S.running = true; S.lastTickSec = null;
 
-  $('#setup').hidden = true; $('#lobby').hidden = true; $('#over').hidden = true; $('#game').hidden = false;
+  $('#setup').hidden = true; $('#lobby').hidden = true; $('#over').hidden = true; $('#reveal').hidden = true; $('#game').hidden = false;
   $('#score').textContent = '0';
   $('#found').innerHTML = ''; $('#foundEmpty').hidden = false; $('#foundCount').textContent = '0';
   $('#msg').textContent = '';
@@ -1042,6 +1086,7 @@ function handleData(conn, msg){
       startFromNetwork(msg);
     } else if (msg.type === 'final'){
       renderLeaderboard(msg.lb, (msg.bonusWords && msg.bonusWords[MP.myId]) || []);
+      if (msg.lb && msg.lb.length >= 2 && msg.words) scheduleReveal(msg.words, msg.lb, msg.revealStartAt);
     }
   }
 }
@@ -1115,7 +1160,11 @@ function computeFinal(){
     lb.push({ id: pid, name: p.name, score, wordCount: p.words.size });
   }
   lb.sort((a, b) => b.score - a.score);
-  return { lb, bonusWords };
+  const words = [...owners.keys()].sort().map(w => {
+    const ids = owners.get(w);
+    return { word: w, uniq: ids.length === 1, entries: ids.map(id => ({ id, pts: MP.players.get(id).words.get(w) })) };
+  });
+  return { lb, bonusWords, words };
 }
 function renderLeaderboard(lb, myBonusWords){
   $('#lbBox').hidden = false;
@@ -1132,16 +1181,75 @@ function renderLeaderboard(lb, myBonusWords){
     });
   }
 }
+
+/* ---- animazione di rivelazione (stile Ruzzle Party) ---- */
+let revealStepFn = null, revealTimerId = null, revealSkip = false;
+function startReveal(words, lb){
+  revealSkip = false; clearTimeout(revealTimerId);
+  const order = lb.map(p => p.id);
+  const names = new Map(lb.map(p => [p.id, p.name]));
+  const running = new Map(order.map(id => [id, 0]));
+  const maxScore = Math.max(1, ...lb.map(p => p.score));
+
+  $('#revealBars').innerHTML = order.map((id, i) =>
+    `<div class="rb-row p${i + 1}"><div class="rb-top"><span>${escapeHtml(names.get(id))}</span>` +
+    `<span class="rb-score" id="rbScore-${id}">0</span></div>` +
+    `<div class="rb-track"><div class="rb-fill" id="rbFill-${id}" style="width:0%"></div></div></div>`).join('');
+  $('#revealLog').innerHTML = '';
+  $('#revealWordText').textContent = ''; $('#revealWordText').classList.remove('show');
+  $('#revealWordTags').innerHTML = '';
+  $('#reveal').hidden = false;
+
+  let i = 0;
+  function finish(){
+    for (const p of lb){
+      const fill = $('#rbFill-' + p.id), sc = $('#rbScore-' + p.id);
+      if (fill) fill.style.width = (p.score / maxScore * 100) + '%';
+      if (sc) sc.textContent = p.score;
+    }
+    $('#revealWordText').classList.remove('show');
+    setTimeout(() => { $('#reveal').hidden = true; $('#over').hidden = false; }, revealSkip ? 120 : 450);
+  }
+  function step(){
+    if (revealSkip || i >= words.length){ finish(); return; }
+    const w = words[i++];
+    $('#revealWordText').textContent = w.word;
+    $('#revealWordText').classList.remove('show'); void $('#revealWordText').offsetWidth; $('#revealWordText').classList.add('show');
+    $('#revealWordTags').innerHTML = w.entries.map(e =>
+      `<span class="${e.id === MP.myId ? 'mine' : ''}${w.uniq ? ' x2b' : ''}">${escapeHtml(names.get(e.id) || '?')} +${w.uniq ? e.pts * 2 : e.pts}${w.uniq ? ' ×2' : ''}</span>`).join('');
+    for (const e of w.entries){
+      const add = w.uniq ? e.pts * 2 : e.pts;
+      running.set(e.id, (running.get(e.id) || 0) + add);
+      const fill = $('#rbFill-' + e.id), sc = $('#rbScore-' + e.id);
+      if (fill) fill.style.width = (running.get(e.id) / maxScore * 100) + '%';
+      if (sc) sc.textContent = running.get(e.id);
+    }
+    const li = document.createElement('li');
+    const tot = w.entries.reduce((s, e) => s + (w.uniq ? e.pts * 2 : e.pts), 0);
+    li.innerHTML = `${w.word}<b>+${tot}</b>`;
+    $('#revealLog').insertBefore(li, $('#revealLog').firstChild);
+    Snd.beep(false);
+    revealTimerId = setTimeout(step, 550);
+  }
+  revealStepFn = step;
+  step();
+}
 function mpOnRoundEnd(){
   if (MP.isHost){
-    const { lb, bonusWords } = computeFinal();
-    for (const conn of MP.conns.values()) conn.send({ type:'final', lb, bonusWords });
+    const { lb, bonusWords, words } = computeFinal();
+    const revealStartAt = Date.now() + 700;
+    for (const conn of MP.conns.values()) conn.send({ type:'final', lb, bonusWords, words, revealStartAt });
     renderLeaderboard(lb, bonusWords[MP.myId]);
+    if (lb.length >= 2) scheduleReveal(words, lb, revealStartAt);
   } else {
     $('#lbBox').hidden = false;
     $('#lbNote').textContent = "In attesa dei punteggi finali dall'host…";
     $('#leaderboard').innerHTML = '';
   }
+}
+function scheduleReveal(words, lb, at){
+  const wait = Math.max(0, (at || Date.now()) - Date.now());
+  setTimeout(() => startReveal(words, lb), wait);
 }
 function updateOverActions(){
   const again = $('#againBtn'), menu = $('#menuBtn');
@@ -1166,6 +1274,10 @@ $('#muteBtn').addEventListener('click', () => {
   const m = Snd.toggleMute();
   $('#muteBtn').textContent = m ? '🔇' : '🔊';
   $('#muteBtn').setAttribute('aria-pressed', m ? 'true' : 'false');
+});
+$('#revealSkip').addEventListener('click', () => {
+  if (!revealStepFn) return;
+  revealSkip = true; clearTimeout(revealTimerId); revealStepFn();
 });
 document.querySelectorAll('input[name=size],input[name=time]').forEach(i => i.addEventListener('change', showRecord));
 $('#loadFileBtn').addEventListener('click', () => $('#dictFile').click());
