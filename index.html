@@ -112,6 +112,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 .stat .val{font-family:var(--serif);font-weight:900;font-size:1.75rem;line-height:1.1;font-variant-numeric:tabular-nums}
 .stat.time.low .val{color:var(--bad)}
 .quit{align-self:stretch;min-width:64px;background:transparent;border:2px solid var(--line);border-radius:14px;font-weight:600;font-size:.9rem}
+#muteBtn{min-width:48px;font-size:1.1rem}
 .bar{height:8px;background:var(--bg2);border-radius:99px;overflow:hidden}
 .bar i{display:block;height:100%;width:100%;background:var(--saffron);border-radius:99px;transition:width .12s linear}
 .bar.low i{background:var(--bad)}
@@ -350,6 +351,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
       <div class="hud">
         <div class="stat"><span class="lbl">Punti</span><span class="val" id="score">0</span></div>
         <div class="stat time" id="timeBox"><span class="lbl">Tempo</span><span class="val" id="timeVal">0:00</span></div>
+        <button class="quit" id="muteBtn" type="button" aria-pressed="false">🔊</button>
         <button class="quit" id="quitBtn" type="button">Termina</button>
       </div>
       <div class="bar" id="bar" style="margin:12px 0 6px"><i id="barFill"></i></div>
@@ -421,8 +423,50 @@ const LEN_BONUS = {5:3, 6:6, 7:10, 8:15};
 const S = {
   n:4, time:120, grid:[], bonus:[], path:[], typed:'',
   found:new Map(), score:0, endAt:0, running:false, dragging:false,
-  timer:null, rects:[], NB:[]
+  timer:null, rects:[], NB:[], lastTickSec:null
 };
+
+/* ---------------- Suoni ---------------- */
+const Snd = (() => {
+  let ctx = null;
+  let muted = (() => { try { return localStorage.getItem('intreccio:muted') === '1'; } catch (e) { return false; } })();
+  function ac(){
+    if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  function tone(c, freq, start, dur, type, peak){
+    const osc = c.createOscillator(), gain = c.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, start);
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(peak, start + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    osc.connect(gain); gain.connect(c.destination);
+    osc.start(start); osc.stop(start + dur + 0.02);
+  }
+  function correct(){
+    if (muted) return; const c = ac(); if (!c) return; const t0 = c.currentTime;
+    tone(c, 660, t0, 0.12, 'triangle', 0.18);
+    tone(c, 880, t0 + 0.06, 0.12, 'triangle', 0.18);
+    tone(c, 1320, t0 + 0.12, 0.18, 'triangle', 0.22);
+  }
+  function beep(urgent){
+    if (muted) return; const c = ac(); if (!c) return; const t0 = c.currentTime;
+    tone(c, urgent ? 1500 : 1050, t0, 0.07, 'square', 0.12);
+  }
+  function buzz(){
+    if (muted) return; const c = ac(); if (!c) return; const t0 = c.currentTime;
+    tone(c, 220, t0, 0.4, 'sawtooth', 0.16);
+    tone(c, 175, t0 + 0.16, 0.42, 'sawtooth', 0.16);
+  }
+  function unlock(){ ac(); }
+  function toggleMute(){
+    muted = !muted;
+    try { localStorage.setItem('intreccio:muted', muted ? '1' : '0'); } catch (e) {}
+    return muted;
+  }
+  return { correct, beep, buzz, unlock, toggleMute, get muted(){ return muted; } };
+})();
 
 /* ---------------- Dizionario ---------------- */
 const dict = { ready:false, set:null, arr:null, count:0 };
@@ -685,6 +729,7 @@ function submitPath(path){
   toast(word + '  +' + pts, 'ok');
   if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} }
   addFoundChip(word, pts);
+  Snd.correct();
   if (MP.active) MP.reportWord(word, pts);
 }
 
@@ -801,12 +846,13 @@ function startGame(){
   S.NB = buildNeighbors(S.n);
   S.grid = genGrid(S.n); S.bonus = genBonus(S.n);
   S.endAt = Date.now() + S.time * 1000;
+  Snd.unlock();
   if (MP.active && MP.isHost) broadcastStart();
   beginRound();
 }
 function beginRound(){
   S.path = []; S.typed = ''; S.found = new Map(); S.score = 0; S.dragging = false;
-  S.running = true;
+  S.running = true; S.lastTickSec = null;
 
   $('#setup').hidden = true; $('#lobby').hidden = true; $('#over').hidden = true; $('#game').hidden = false;
   $('#score').textContent = '0';
@@ -825,6 +871,10 @@ function tick(){
   $('#barFill').style.width = (ms / (S.time * 1000) * 100) + '%';
   const low = sec <= 10;
   $('#timeBox').classList.toggle('low', low); $('#bar').classList.toggle('low', low);
+  if (low && sec >= 1 && sec !== S.lastTickSec){
+    S.lastTickSec = sec;
+    Snd.beep(sec <= 5);
+  }
   if (ms <= 0) endGame();
 }
 
@@ -843,6 +893,7 @@ function endGame(){
   if (!S.running) return;
   S.running = false; clearInterval(S.timer);
   S.dragging = false; S.path = []; S.typed = ''; updatePathUI();
+  Snd.buzz();
 
   const prev = +storeGet(recKey()) || 0;
   const isRecord = S.score > prev && S.score > 0;
@@ -1111,6 +1162,11 @@ $('#menuBtn').addEventListener('click', () => {
   else { $('#setup').hidden = false; showRecord(); }
 });
 $('#quitBtn').addEventListener('click', () => { if (S.running) endGame(); });
+$('#muteBtn').addEventListener('click', () => {
+  const m = Snd.toggleMute();
+  $('#muteBtn').textContent = m ? '🔇' : '🔊';
+  $('#muteBtn').setAttribute('aria-pressed', m ? 'true' : 'false');
+});
 document.querySelectorAll('input[name=size],input[name=time]').forEach(i => i.addEventListener('change', showRecord));
 $('#loadFileBtn').addEventListener('click', () => $('#dictFile').click());
 $('#dictFile').addEventListener('change', async e => {
@@ -1135,6 +1191,8 @@ $('#dictFile').addEventListener('change', async e => {
   } catch (e) {}
   showRecord();
   loadDictionary();
+  $('#muteBtn').textContent = Snd.muted ? '🔇' : '🔊';
+  $('#muteBtn').setAttribute('aria-pressed', Snd.muted ? 'true' : 'false');
 })();
 })();
 </script>
