@@ -23,6 +23,7 @@
   --sky:#7cc8e3;
   --blue:#3d8fd1;
   --coral:#ef8a7d;
+  --purple:#a163d6;
   --bad:#ff8a7a;
   --good:#8fe3a8;
   --serif:'Fraunces',Georgia,'Times New Roman',serif;
@@ -96,7 +97,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 .rules{margin:26px 0 0;padding:0;list-style:none;color:var(--muted);font-size:.93rem;display:grid;gap:8px}
 .rules b{color:var(--text);font-weight:600}
 .chip{display:inline-block;padding:0 7px;border-radius:6px;font-weight:800;font-size:.8rem;color:var(--ink)}
-.chip.dl{background:var(--sky)} .chip.tl{background:var(--blue);color:#fff} .chip.dw{background:var(--coral)}
+.chip.dl{background:var(--sky)} .chip.tl{background:var(--blue);color:#fff} .chip.dw{background:var(--coral)} .chip.tw{background:var(--purple);color:#fff}
 
 /* ---------- Game ---------- */
 .game{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
@@ -163,6 +164,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 .tile.b-DL{background:#dbeef5}.tile.b-DL .bn{background:var(--sky)}
 .tile.b-TL{background:#cfe0f3}.tile.b-TL .bn{background:var(--blue);color:#fff}
 .tile.b-DW{background:#f8dcd6}.tile.b-DW .bn{background:var(--coral)}
+.tile.b-TW{background:#ecd9f7}.tile.b-TW .bn{background:var(--purple);color:#fff}
 .tile.sel{background:var(--saffron);transform:translateY(.05em);box-shadow:0 .02em 0 #b98518,0 .05em 0 rgba(0,0,0,.35)}
 .tile.sel .bn{background:var(--ink);color:var(--saffron)}
 .tile.ok{background:#7be39a;box-shadow:0 .02em 0 #2f9a55,0 .05em 0 rgba(0,0,0,.35),0 0 .5em rgba(123,227,154,.75);transform:translateY(.05em)}
@@ -231,6 +233,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 .board-ref .tile.b-DL{background:#dbeef5}
 .board-ref .tile.b-TL{background:#cfe0f3}
 .board-ref .tile.b-DW{background:#f8dcd6}
+.board-ref .tile.b-TW{background:#ecd9f7}
 .missed{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:6px}
 .missed li{background:var(--bg2);border-radius:99px;padding:2px 10px;font-size:.9rem}
 .missed li b{color:var(--saffron);margin-left:4px}
@@ -361,7 +364,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 
     <ul class="rules">
       <li><b>Punteggio:</b> ogni lettera ha un valore (A=1, C=2, M=3, B=5, Z=8…). Le parole lunghe danno un bonus.</li>
-      <li><b>Caselle speciali:</b> <span class="chip dl">2L</span> raddoppia la lettera, <span class="chip tl">3L</span> la triplica, <span class="chip dw">2P</span> raddoppia la parola.</li>
+      <li><b>Caselle speciali:</b> <span class="chip dl">2L</span> raddoppia la lettera, <span class="chip tl">3L</span> la triplica, <span class="chip dw">2P</span> raddoppia la parola, <span class="chip tw">3P</span> la triplica.</li>
       <li><b>Regole:</b> le parole più corte della lunghezza minima scelta non contano. Ogni parola vale una sola volta.</li>
       <li><b>Comandi:</b> trascina il dito o il mouse sulle lettere. Su computer puoi anche digitare la parola e premere Invio.</li>
     </ul>
@@ -477,7 +480,7 @@ const ALPHA = new Set(Object.keys(LD));
 const TOTAL_W = Object.values(LD).reduce((a,[w]) => a + w, 0);
 const VOWELS = 'AEIOU';
 const MIN_LEN = 3;
-const BONUS_LABEL = {DL:'2L', TL:'3L', DW:'2P'};
+const BONUS_LABEL = {DL:'2L', TL:'3L', DW:'2P', TW:'3P'};
 const LEN_BONUS = {5:3, 6:6, 7:10, 8:15};
 
 const S = {
@@ -661,11 +664,12 @@ function genGrid(n){
 function genBonus(n){
   const N = n * n, idx = [...Array(N).keys()];
   for (let i = N - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
-  const dl = n - 2, tl = n - 3, dw = n >= 6 ? 2 : 1;
+  const dl = n - 2, tl = n - 3, dw = n >= 6 ? 2 : 1, tw = n >= 5 ? 1 : 0;
   const b = new Array(N).fill(null); let k = 0;
   for (let i = 0; i < dl; i++) b[idx[k++]] = 'DL';
   for (let i = 0; i < tl; i++) b[idx[k++]] = 'TL';
   for (let i = 0; i < dw; i++) b[idx[k++]] = 'DW';
+  for (let i = 0; i < tw; i++) b[idx[k++]] = 'TW';
   return b;
 }
 function buildNeighbors(n){
@@ -688,7 +692,7 @@ function scorePath(path){
   for (const i of path){
     const t = S.grid[i], b = S.bonus[i];
     let m = 1;
-    if (b === 'DL') m = 2; else if (b === 'TL') m = 3; else if (b === 'DW') wm *= 2;
+    if (b === 'DL') m = 2; else if (b === 'TL') m = 3; else if (b === 'DW') wm *= 2; else if (b === 'TW') wm *= 3;
     sum += t.val * m; letters += t.text.length;
   }
   sum *= wm;
