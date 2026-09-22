@@ -480,7 +480,9 @@ const LD = {
 const ALPHA = new Set(Object.keys(LD));
 const TOTAL_W = Object.values(LD).reduce((a,[w]) => a + w, 0);
 const VOWELS = 'AEIOU';
-const MIN_LEN = 3;
+const MIN_LEN = 2;
+// Parole italiane di 2 lettere valide (spesso assenti dalle liste scaricate, quindi le aggiungiamo a mano)
+const EXTRA_2LETTER = ['AD','AI','AL','DA','DI','DO','ED','FA','FU','HA','HO','IL','IN','IO','LA','LE','LI','LO','MA','MI','NE','NO','OR','RE','SA','SE','SI','SU','TE','TI','TU','UN','VA'];
 const BONUS_LABEL = {DL:'2L', TL:'3L', DW:'2P', TW:'3P'};
 const LEN_BONUS = {5:3, 6:6, 7:10, 8:15};
 
@@ -555,6 +557,7 @@ function buildDict(text){
     if (ok) set.add(w);
   }
   if (set.size < 1000) return false;
+  for (const w of EXTRA_2LETTER) set.add(w);
   dict.set = set;
   dict.arr = Array.from(set).sort();
   dict.count = set.size;
