@@ -388,7 +388,6 @@ ul.def-final li .missed li{background:var(--bg);font-weight:600}
     <div class="def-count-box" id="defCountBox" hidden>
       <fieldset class="seg" id="defCountSeg" style="grid-template-columns:repeat(4,1fr)">
         <legend>Quante parole per decretare il vincitore?</legend>
-        <label><input type="radio" name="defCount" value="1"><span>1</span></label>
         <label><input type="radio" name="defCount" value="3"><span>3</span></label>
         <label><input type="radio" name="defCount" value="5" checked><span>5</span></label>
         <label><input type="radio" name="defCount" value="7"><span>7</span></label>
@@ -448,7 +447,6 @@ ul.def-final li .missed li{background:var(--bg);font-weight:600}
     <div class="def-count-box" id="lobbyDefCountBox" hidden>
       <fieldset class="seg" id="lobbyDefCountSeg" style="grid-template-columns:repeat(4,1fr)">
         <legend>Quante parole per decretare il vincitore?</legend>
-        <label><input type="radio" name="lobbyDefCount" value="1"><span>1</span></label>
         <label><input type="radio" name="lobbyDefCount" value="3"><span>3</span></label>
         <label><input type="radio" name="lobbyDefCount" value="5" checked><span>5</span></label>
         <label><input type="radio" name="lobbyDefCount" value="7"><span>7</span></label>
@@ -724,6 +722,11 @@ function truncateWords(s, n){
   if (parts.length <= n) return parts.join(' ');
   return parts.slice(0, n).join(' ') + '…';
 }
+/* Vero se `s` è composta da una sola parola (es. un semplice sinonimo secco):
+   queste vengono scartate perché troppo povere come indizio. */
+function isSingleWord(s){
+  return String(s).trim().split(/\s+/).filter(Boolean).length <= 1;
+}
 const DEF_TARGET_LEN = 8, DEF_MAX_LEN = 9;
 /* Recupera una breve definizione (circa 7-9 parole) per `word` da Wikizionario.
    Non ripiega mai sulla parola stessa: se non trova una definizione utilizzabile
@@ -748,7 +751,7 @@ async function fetchDefinitionRest(word){
     for (const e of entries){
       for (const d of (e.definitions || [])){
         const clean = stripHtml(d.definition || '');
-        if (clean && !spoilerRe.test(normalize(clean))) candidates.push(clean);
+        if (clean && !isSingleWord(clean) && !spoilerRe.test(normalize(clean))) candidates.push(clean);
       }
     }
     if (!candidates.length) return null;
@@ -757,7 +760,8 @@ async function fetchDefinitionRest(word){
 }
 /* Tentativo 2 (fallback): scarica il wikitesto della voce dall'API classica di
    MediaWiki (CORS abilitato con origin=*) ed estrae la prima riga "# ..."
-   della sezione italiana, ripulita dalla sintassi wiki. */
+   della sezione italiana, ripulita dalla sintassi wiki, oltre a sinonimi e
+   contrari elencati nella voce. */
 async function fetchDefinitionWikitext(word){
   try {
     const url = 'https://it.wiktionary.org/w/api.php?action=parse&format=json&origin=*&redirects=1&prop=wikitext&page=' + encodeURIComponent(word.toLowerCase());
@@ -776,12 +780,42 @@ async function fetchDefinitionWikitext(word){
         .replace(/'''?/g, '')
         .replace(/<[^>]+>/g, '')
         .trim();
-      if (clean && !spoilerRe.test(normalize(clean))) candidates.push(clean);
+      if (clean && !isSingleWord(clean) && !spoilerRe.test(normalize(clean))) candidates.push(clean);
       if (candidates.length >= 8) break;
     }
+    const syn = extractWordList(wt, ['Sinonimi', '-syn-']).filter(s => !spoilerRe.test(normalize(s)));
+    const ant = extractWordList(wt, ['Contrari', 'Antonimi', '-ant-']).filter(s => !spoilerRe.test(normalize(s)));
+    const extra = [];
+    if (syn.length) extra.push('Sinonimo di: ' + syn[0]);
+    if (ant.length) extra.push('Contrario di: ' + ant[0]);
+    // Dà un po' di varietà: a volte preferisce sinonimo/contrario a una definizione vera e propria.
+    if (extra.length && (!candidates.length || Math.random() < 0.35)){
+      return truncateWords(extra[Math.floor(Math.random() * extra.length)], DEF_MAX_LEN);
+    }
+    candidates.push(...extra);
     if (!candidates.length) return null;
     return pickBestCandidate(candidates);
   } catch (e) { return null; }
+}
+/* Estrae un elenco di parole da una sezione del wikitesto (es. Sinonimi,
+   Contrari), riconoscendo sia i link [[...]] sia le liste separate da virgola. */
+function extractWordList(wt, headingWords){
+  const lines = wt.split('\n');
+  const re = new RegExp('^(\\{\\{\\s*(?:' + headingWords.join('|') + ')\\s*\\}\\}|===?\\s*(?:' + headingWords.join('|') + ')\\s*===?)', 'i');
+  for (let i = 0; i < lines.length; i++){
+    if (!re.test(lines[i].trim())) continue;
+    const words = [];
+    for (let j = i + 1; j < lines.length; j++){
+      const l = lines[j].trim();
+      if (!l){ if (words.length) break; else continue; }
+      if (/^(\{\{|==)/.test(l)) break;
+      const linkMatches = [...l.matchAll(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g)].map(m => m[1]);
+      if (linkMatches.length) words.push(...linkMatches);
+      else l.replace(/^[:*#]+\s*/, '').split(/[,;]/).map(s => s.trim()).filter(Boolean).forEach(w => words.push(w));
+    }
+    return words.filter(Boolean);
+  }
+  return [];
 }
 function pickBestCandidate(candidates){
   let best = candidates[0], bestDiff = Infinity;
