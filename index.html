@@ -444,10 +444,6 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
       <p id="overStats"></p>
       <h3>Griglia della partita</h3>
       <div class="board-ref" id="boardRef"></div>
-      <div id="overFoundBox">
-        <h3>Le tue parole <span id="overFoundCount"></span></h3>
-        <ul class="missed" id="overFound"></ul>
-      </div>
       <div id="missedBox" hidden>
         <h3>Le 10 parole più lunghe disponibili</h3>
         <p id="missedInfo"></p>
@@ -1016,12 +1012,7 @@ function endGame(){
   $('#overStats').innerHTML = S.found.size
     ? `Hai trovato <b>${S.found.size}</b> ${S.found.size === 1 ? 'parola' : 'parole'}. La più lunga: <b>${longest}</b>.`
     : 'Non hai trovato nessuna parola.';
-  $('#overFoundCount').textContent = S.found.size ? `(${S.found.size})` : '';
   renderBoardRef();
-  const foundSorted = [...S.found.entries()].sort((a, b) => b[0].length - a[0].length || b[1] - a[1]);
-  $('#overFound').innerHTML = foundSorted.length
-    ? foundSorted.map(([w, p]) => `<li>${w}<b>${p}</b></li>`).join('')
-    : '<li class="empty-note">Nessuna parola trovata.</li>';
   $('#missedBox').hidden = true;
   $('#lbBox').hidden = true;
   $('#overRest').hidden = true;
@@ -1298,13 +1289,6 @@ function renderLeaderboard(lb, myBonusWords){
     `<li class="${p.id === meId() ? 'me' : ''}"><div class="lb-head"><span class="rank">${i + 1}</span>` +
     `<span class="nm">${escapeHtml(p.name)}<span class="sub">${p.wordCount} parole</span></span>` +
     `<span class="pt">${p.score}</span></div></li>`).join('');
-  const set = new Set(myBonusWords || []);
-  if (set.size){
-    document.querySelectorAll('#overFound li').forEach(li => {
-      const w = li.childNodes[0] && li.childNodes[0].textContent;
-      if (w && set.has(w)) li.insertAdjacentHTML('beforeend', '<span class="x2">x2</span>');
-    });
-  }
 }
 
 /* ---- animazione di rivelazione (stile Ruzzle Party) ---- */
@@ -1337,6 +1321,7 @@ function startReveal(words, lb, baseAt){
     }
     $('#revealWordText').classList.remove('show');
     $('#revealSkip').hidden = true;
+    $('#revealLog').innerHTML = '';
     $('#overRest').hidden = false;
   }
   function applyWord(w, animate){
