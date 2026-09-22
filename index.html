@@ -789,6 +789,25 @@ async function fetchDefinitionRest(word){
    MediaWiki (CORS abilitato con origin=*) ed estrae la prima riga "# ..."
    della sezione italiana, ripulita dalla sintassi wiki, oltre a sinonimi e
    contrari elencati nella voce. */
+/* Isola, dal wikitesto completo della voce, solo la sezione della lingua
+   italiana (tra "== {{-it-}} ==" e l'intestazione della lingua successiva),
+   scartando eventuali sezioni in altre lingue (es. la stessa grafia esiste
+   anche come parola inglese, francese, latina...): senza questo filtro le
+   definizioni estratte potevano finire per essere in un'altra lingua. */
+function extractItalianSection(wt){
+  const lines = wt.split('\n');
+  const langHeaderRe = /^==\s*\{\{-([a-zA-Z]{2,3})-\}\}\s*==/;
+  let start = -1, end = lines.length;
+  for (let i = 0; i < lines.length; i++){
+    const m = lines[i].trim().match(langHeaderRe);
+    if (!m) continue;
+    if (start === -1){
+      if (m[1].toLowerCase() === 'it') start = i + 1;
+    } else { end = i; break; }
+  }
+  if (start === -1) return wt; // nessuna intestazione di lingua trovata: usa tutto il testo
+  return lines.slice(start, end).join('\n');
+}
 async function fetchDefinitionWikitext(word){
   try {
     const url = 'https://it.wiktionary.org/w/api.php?action=parse&format=json&origin=*&redirects=1&prop=wikitext&page=' + encodeURIComponent(word.toLowerCase());
@@ -796,9 +815,10 @@ async function fetchDefinitionWikitext(word){
     const data = JSON.parse(text);
     const wt = data && data.parse && data.parse.wikitext && data.parse.wikitext['*'];
     if (!wt) return null;
+    const itWt = extractItalianSection(wt);
     const spoilerRe = new RegExp('(^|[^A-Z])' + word + '([^A-Z]|$)');
     const candidates = [];
-    for (const raw of wt.split('\n')){
+    for (const raw of itWt.split('\n')){
       const m = raw.match(/^#\s*([^#:*].*)/);
       if (!m) continue;
       let clean = m[1]
@@ -810,8 +830,8 @@ async function fetchDefinitionWikitext(word){
       if (clean && !isSingleWord(clean) && !spoilerRe.test(normalize(clean))) candidates.push(clean);
       if (candidates.length >= 8) break;
     }
-    const syn = extractWordList(wt, ['Sinonimi', '-syn-']).filter(s => !spoilerRe.test(normalize(s)));
-    const ant = extractWordList(wt, ['Contrari', 'Antonimi', '-ant-']).filter(s => !spoilerRe.test(normalize(s)));
+    const syn = extractWordList(itWt, ['Sinonimi', '-syn-']).filter(s => !spoilerRe.test(normalize(s)));
+    const ant = extractWordList(itWt, ['Contrari', 'Antonimi', '-ant-']).filter(s => !spoilerRe.test(normalize(s)));
     const extra = [];
     if (syn.length) extra.push('Sinonimo di: ' + syn[0]);
     if (ant.length) extra.push('Contrario di: ' + ant[0]);
