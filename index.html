@@ -1282,10 +1282,13 @@ function computeFinal(players = MP.players, solo = false){
     lb.push({ id: pid, name: p.name, score, wordCount: p.words.size });
   }
   lb.sort((a, b) => b.score - a.score);
-  const words = [...owners.keys()].sort().map(w => {
+  const words = [...owners.keys()].map(w => {
     const ids = owners.get(w);
-    return { word: w, uniq: !solo && ids.length === 1, entries: ids.map(id => ({ id, pts: players.get(id).words.get(w) })) };
-  });
+    const uniq = !solo && ids.length === 1;
+    const entries = ids.map(id => ({ id, pts: players.get(id).words.get(w) }));
+    const total = entries.reduce((s, e) => s + (uniq ? e.pts * 2 : e.pts), 0);
+    return { word: w, uniq, entries, total };
+  }).sort((a, b) => a.total - b.total || a.word.localeCompare(b.word));
   return { lb, bonusWords, words };
 }
 function renderLeaderboard(lb, myBonusWords){
