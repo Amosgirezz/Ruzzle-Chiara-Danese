@@ -343,7 +343,8 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
       <label><input type="radio" name="time" value="180"><span>180<small>secondi</small></span></label>
     </fieldset>
 
-    <fieldset class="seg" id="minLenSeg" style="grid-template-columns:repeat(4,1fr)">
+    <fieldset class="seg" id="minLenSeg" style="grid-template-columns:repeat(5,1fr)">
+      <label><input type="radio" name="minLen" value="2"><span>2<small>lettere</small></span></label>
       <legend>Lunghezza minima parole</legend>
       <label><input type="radio" name="minLen" value="3" checked><span>3<small>lettere</small></span></label>
       <label><input type="radio" name="minLen" value="4"><span>4<small>lettere</small></span></label>
@@ -1297,7 +1298,7 @@ function renderLeaderboard(lb, myBonusWords){
 }
 
 /* ---- animazione di rivelazione (stile Ruzzle Party) ---- */
-const REVEAL_STEP_MS = 2500;
+const REVEAL_STEP_MS = 1200;
 let revealTimerId = null, revealSkip = false, revealBaseAt = 0, revealFastForward = null;
 function startReveal(words, lb, baseAt){
   revealSkip = false; clearTimeout(revealTimerId);
