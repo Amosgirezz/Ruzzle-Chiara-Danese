@@ -130,6 +130,19 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
   background:var(--saffron);color:var(--ink);padding:2px 10px;border-radius:99px;
 }
 .current .cp:empty{display:none}
+.def-target{
+  text-align:center;margin:0 0 10px;padding:10px 16px;background:var(--bg2);border-radius:14px;
+  font-size:.95rem;color:var(--muted);
+}
+.def-target b{font-family:var(--serif);font-weight:900;font-size:1.1rem;color:var(--saffron);letter-spacing:0;line-height:1.3}
+.def-progress{font-size:.78rem;color:var(--muted);margin-bottom:2px}
+.def-count-box{margin-top:16px;padding:16px;background:var(--bg2);border-radius:14px}
+ul.def-final{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+ul.def-final li{display:block;background:var(--bg2);border-radius:10px;padding:8px 12px;font-weight:600}
+ul.def-final li .row{display:flex;justify-content:space-between;align-items:center}
+ul.def-final li b{color:var(--saffron)}
+ul.def-final li .missed{margin:8px 0 0}
+ul.def-final li .missed li{background:var(--bg);font-weight:600}
 
 .board-wrap{width:100%;max-width:min(100%, calc(100dvh - 330px));min-width:min(100%,280px);margin:0 auto}
 @supports not (height:100dvh){.board-wrap{max-width:min(100%, calc(100vh - 330px))}}
@@ -175,7 +188,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 @keyframes shake{20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
 .board-count{
   position:absolute;inset:0;display:grid;place-items:center;z-index:6;
-  background:rgba(16,38,43,.85);border-radius:22px;backdrop-filter:blur(1px);
+  background:rgba(16,38,43,.94);border-radius:22px;backdrop-filter:blur(2px);
 }
 .board-count span{
   font-family:var(--serif);font-weight:900;color:var(--saffron);
@@ -183,6 +196,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
   animation:cd-pop .5s cubic-bezier(.2,.8,.3,1);
 }
 .board-count span.go{color:var(--good);font-size:clamp(36px,12cqw,64px)}
+.board-count span.winner{color:#fff;font-family:var(--sans);font-weight:800;font-size:clamp(22px,8cqw,36px);text-align:center;padding:0 12px;text-transform:uppercase;letter-spacing:.02em}
 @keyframes cd-pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
 .board.pop{animation:pop .2s}
 @keyframes pop{50%{transform:scale(1.015)}}
@@ -222,13 +236,17 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 .sheet p b{color:var(--text)}
 .sheet h3{font-size:1rem;margin:20px 0 8px}
 .board-ref{
-  --n:4;display:grid;grid-template-columns:repeat(var(--n),1fr);gap:5px;
+  --n:4;position:relative;display:grid;grid-template-columns:repeat(var(--n),1fr);gap:5px;
   max-width:260px;margin:14px auto 18px;container-type:inline-size;
 }
 .board-ref .tile{
   position:relative;aspect-ratio:1;display:grid;place-items:center;background:var(--tile);color:var(--ink);
   border-radius:18%;font-family:var(--serif);font-weight:900;font-size:calc(100cqw / var(--n) * .42);
-  box-shadow:0 .05em 0 var(--tile-edge);line-height:1;
+  box-shadow:0 .05em 0 var(--tile-edge);line-height:1;transition:background .15s,transform .15s;
+}
+.board-ref .tile .step{
+  position:absolute;left:.1em;top:.08em;font-family:var(--sans);font-weight:800;font-size:.32em;
+  background:var(--ink);color:var(--saffron);border-radius:.5em;padding:.05em .35em;line-height:1.3;
 }
 .board-ref .tile.b-DL{background:#dbeef5}
 .board-ref .tile.b-TL{background:#cfe0f3}
@@ -236,6 +254,9 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 .board-ref .tile.b-TW{background:#ecd9f7}
 .missed{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:6px}
 .missed li{background:var(--bg2);border-radius:99px;padding:2px 10px;font-size:.9rem}
+.missed li[data-word]{cursor:pointer;transition:outline-color .15s}
+.missed li[data-word]:hover{background:var(--line)}
+.missed li.active{outline:2px solid var(--saffron)}
 .missed li b{color:var(--saffron);margin-left:4px}
 .missed li.hit{background:var(--good);color:var(--ink)}
 .missed li.hit b{color:var(--ink)}
@@ -302,6 +323,12 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 .rb-row.p2 .rb-fill{background:var(--sky)}
 .rb-row.p3 .rb-fill{background:var(--coral)}
 .rb-row.p4 .rb-fill{background:var(--good)}
+.rb-row{border-radius:10px;transition:background .25s,box-shadow .25s;padding:2px 4px;margin:-2px -4px}
+.rb-row.active{background:rgba(245,184,61,.14);box-shadow:0 0 0 2px var(--saffron) inset}
+.rb-row.active .rb-top span:first-child{color:var(--saffron)}
+.reveal-progress{display:flex;align-items:center;gap:10px}
+.reveal-progress .bar{flex:1}
+.reveal-progress-label{font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
 .reveal-word{min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
 .rw-text{
   font-family:var(--serif);font-weight:900;font-size:clamp(30px,8vw,52px);letter-spacing:.03em;
@@ -313,7 +340,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 .rw-tags span.mine{background:var(--good);color:var(--ink)}
 .rw-tags span.x2b{box-shadow:0 0 0 2px var(--saffron) inset}
 .reveal-log{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px;max-height:24dvh;overflow:auto;justify-content:center}
-.reveal-log li{background:var(--bg2);border-radius:99px;padding:2px 10px;font-size:.8rem;opacity:.85}
+.reveal-log li{background:var(--bg2);border-radius:99px;padding:2px 10px;font-size:.8rem;opacity:.85;cursor:pointer}
 .reveal-log li b{color:var(--saffron);margin-left:4px}
 
 @media (prefers-reduced-motion:reduce){
@@ -354,8 +381,27 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 
     <div class="start-row">
       <button class="btn" id="startBtn" type="button" disabled>Caricamento…</button>
+      <button class="btn" id="defModeBtn" type="button" disabled title="Modalità definizioni">Definizioni</button>
       <span id="recordLine" class="note"></span>
     </div>
+
+    <div class="def-count-box" id="defCountBox" hidden>
+      <fieldset class="seg" id="defCountSeg" style="grid-template-columns:repeat(4,1fr)">
+        <legend>Quante parole per decretare il vincitore?</legend>
+        <label><input type="radio" name="defCount" value="3"><span>3</span></label>
+        <label><input type="radio" name="defCount" value="5" checked><span>5</span></label>
+        <label><input type="radio" name="defCount" value="7"><span>7</span></label>
+        <label><input type="radio" name="defCount" value="15"><span>15</span></label>
+        <label><input type="radio" name="defCount" value="25"><span>25</span></label>
+        <label><input type="radio" name="defCount" value="40"><span>40</span></label>
+      </fieldset>
+      <div class="start-row">
+        <button class="btn" id="defConfirmBtn" type="button">Inizia definizioni</button>
+        <button class="btn ghost" id="defCancelBtn" type="button">Annulla</button>
+      </div>
+    </div>
+
+    <div class="msg" id="msgSetup" aria-live="polite"></div>
 
     <div class="dict">
       <div class="st"><span class="dot load" id="dictDot"></span><span id="dictText">Carico il dizionario italiano…</span></div>
@@ -394,8 +440,26 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
     <ul class="players" id="lobbyPlayers"></ul>
     <div class="start-row">
       <button class="btn" id="lobbyStartBtn" type="button" hidden>Avvia partita</button>
+      <button class="btn" id="lobbyDefBtn" type="button" hidden title="Modalità definizioni">Definizioni</button>
       <button class="btn ghost" id="lobbyLeaveBtn" type="button">Esci dalla lobby</button>
     </div>
+
+    <div class="def-count-box" id="lobbyDefCountBox" hidden>
+      <fieldset class="seg" id="lobbyDefCountSeg" style="grid-template-columns:repeat(4,1fr)">
+        <legend>Quante parole per decretare il vincitore?</legend>
+        <label><input type="radio" name="lobbyDefCount" value="3"><span>3</span></label>
+        <label><input type="radio" name="lobbyDefCount" value="5" checked><span>5</span></label>
+        <label><input type="radio" name="lobbyDefCount" value="7"><span>7</span></label>
+        <label><input type="radio" name="lobbyDefCount" value="15"><span>15</span></label>
+        <label><input type="radio" name="lobbyDefCount" value="25"><span>25</span></label>
+        <label><input type="radio" name="lobbyDefCount" value="40"><span>40</span></label>
+      </fieldset>
+      <div class="start-row">
+        <button class="btn" id="lobbyDefConfirmBtn" type="button">Inizia definizioni</button>
+        <button class="btn ghost" id="lobbyDefCancelBtn" type="button">Annulla</button>
+      </div>
+    </div>
+    <div class="msg" id="msgLobby" aria-live="polite"></div>
     <p class="note" id="lobbyWait">In attesa che l'host avvii la partita…</p>
     <p class="note warn" id="lobbyErr" hidden></p>
   </section>
@@ -410,6 +474,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
         <button class="quit" id="quitBtn" type="button">Termina</button>
       </div>
       <div class="bar" id="bar" style="margin:12px 0 6px"><i id="barFill"></i></div>
+      <div class="def-target" id="defTargetBox" hidden><div class="def-progress" id="defProgress"></div>Definizione: <b id="defTargetWord"></b></div>
       <div class="current" aria-live="polite"><span class="cw hint" id="curWord"></span><span class="cp" id="curPts"></span></div>
       <div class="board-wrap">
         <div class="board" id="board"><div class="grid" id="grid"></div><div class="board-count" id="boardCount" hidden><span id="boardCountNum">3</span></div></div>
@@ -431,6 +496,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
     <h2 id="overTitle">Tempo scaduto</h2>
     <div id="revealBox" hidden>
       <h3>Confronto parole in diretta <button class="btn ghost small" id="revealSkip" type="button" hidden>Velocizza per tutti ▶▶</button></h3>
+      <div class="reveal-progress"><div class="bar"><i id="revealProgressFill"></i></div><span class="reveal-progress-label" id="revealProgressLabel">0 / 0</span></div>
       <div class="reveal-bars" id="revealBars"></div>
       <div class="reveal-word">
         <span class="rw-text" id="revealWordText"></span>
@@ -438,21 +504,21 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
       </div>
       <ul class="reveal-log" id="revealLog"></ul>
     </div>
+    <h3>Griglia della partita</h3>
+    <div class="board-ref" id="boardRef"></div>
+    <div id="lbBox" hidden>
+      <h3>Classifica</h3>
+      <p class="note" id="lbNote"></p>
+      <ol class="leaderboard" id="leaderboard"></ol>
+    </div>
     <div id="overRest" hidden>
       <div class="big" id="overScore">0</div>
       <p id="overRecord"></p>
       <p id="overStats"></p>
-      <h3>Griglia della partita</h3>
-      <div class="board-ref" id="boardRef"></div>
       <div id="missedBox" hidden>
         <h3>Le 10 parole più lunghe disponibili</h3>
         <p id="missedInfo"></p>
         <ul class="missed" id="missed"></ul>
-      </div>
-      <div id="lbBox" hidden>
-        <h3>Classifica</h3>
-        <p class="note" id="lbNote"></p>
-        <ol class="leaderboard" id="leaderboard"></ol>
       </div>
     </div>
     <div class="actions">
@@ -487,7 +553,9 @@ const LEN_BONUS = {5:3, 6:6, 7:10, 8:15};
 const S = {
   n:4, time:120, minLen:3, grid:[], bonus:[], path:[], typed:'',
   found:new Map(), score:0, startAt:0, endAt:0, running:false, dragging:false,
-  timer:null, countdownTimer:null, rects:[], NB:[], lastTickSec:null
+  timer:null, countdownTimer:null, rects:[], NB:[], lastTickSec:null,
+  defMode:false, defTarget:'', defFound:false, defWinnerId:null,
+  defWords:[], defClues:[], defWordTime:20, defRoundNum:0, defScores:new Map(), defHistory:[], defLastCount:null
 };
 const COUNTDOWN_MS = 3000;
 
@@ -632,12 +700,133 @@ function finishDictLoad(){
 }
 function enableStart(){
   const b = $('#startBtn'); b.disabled = false; b.textContent = 'Inizia la partita';
+  const d = $('#defModeBtn'); if (d) d.disabled = !dict.ready;
 }
 
 function isValidWord(w){
   if (dict.ready) return dict.set.has(w);
   // modalità permissiva: almeno una vocale e nessuna lettera ripetuta 3 volte
   return /[AEIOU]/.test(w) && !/(.)\1\1/.test(w);
+}
+
+/* ---------------- Definizioni (Wikizionario) ---------------- */
+function stripHtml(html){
+  return String(html)
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ').trim();
+}
+function truncateWords(s, n){
+  const parts = s.split(/\s+/).filter(Boolean);
+  if (parts.length <= n) return parts.join(' ');
+  return parts.slice(0, n).join(' ') + '…';
+}
+const DEF_TARGET_LEN = 8, DEF_MAX_LEN = 9;
+/* Recupera una breve definizione (circa 7-9 parole) per `word` da Wikizionario.
+   Non ripiega mai sulla parola stessa: se non trova una definizione utilizzabile
+   (o tutte le voci contengono la parola, rivelandola), restituisce null così il
+   chiamante può scartare quella parola e sceglierne un'altra. */
+async function fetchDefinition(word){
+  const rest = await fetchDefinitionRest(word);
+  if (rest) return rest;
+  return await fetchDefinitionWikitext(word);
+}
+/* Tentativo 1: endpoint REST /page/definition (ufficialmente documentato solo
+   per l'inglese, ma a volte disponibile anche per altre lingue). */
+async function fetchDefinitionRest(word){
+  try {
+    const url = 'https://it.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(word.toLowerCase());
+    const text = await fetchText(url, 4000);
+    const data = JSON.parse(text);
+    const entries = data.it;
+    if (!entries || !entries.length) return null;
+    const spoilerRe = new RegExp('(^|[^A-Z])' + word + '([^A-Z]|$)');
+    const candidates = [];
+    for (const e of entries){
+      for (const d of (e.definitions || [])){
+        const clean = stripHtml(d.definition || '');
+        if (clean && !spoilerRe.test(normalize(clean))) candidates.push(clean);
+      }
+    }
+    if (!candidates.length) return null;
+    return pickBestCandidate(candidates);
+  } catch (e) { return null; }
+}
+/* Tentativo 2 (fallback): scarica il wikitesto della voce dall'API classica di
+   MediaWiki (CORS abilitato con origin=*) ed estrae la prima riga "# ..."
+   della sezione italiana, ripulita dalla sintassi wiki, oltre a sinonimi e
+   contrari elencati nella voce. */
+async function fetchDefinitionWikitext(word){
+  try {
+    const url = 'https://it.wiktionary.org/w/api.php?action=parse&format=json&origin=*&redirects=1&prop=wikitext&page=' + encodeURIComponent(word.toLowerCase());
+    const text = await fetchText(url, 4000);
+    const data = JSON.parse(text);
+    const wt = data && data.parse && data.parse.wikitext && data.parse.wikitext['*'];
+    if (!wt) return null;
+    const spoilerRe = new RegExp('(^|[^A-Z])' + word + '([^A-Z]|$)');
+    const candidates = [];
+    for (const raw of wt.split('\n')){
+      const m = raw.match(/^#\s*([^#:*].*)/);
+      if (!m) continue;
+      let clean = m[1]
+        .replace(/\{\{[^{}]*\}\}/g, '')
+        .replace(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g, '$1')
+        .replace(/'''?/g, '')
+        .replace(/<[^>]+>/g, '')
+        .trim();
+      if (clean && !spoilerRe.test(normalize(clean))) candidates.push(clean);
+      if (candidates.length >= 8) break;
+    }
+    const syn = extractWordList(wt, ['Sinonimi', '-syn-']).filter(s => !spoilerRe.test(normalize(s)));
+    const ant = extractWordList(wt, ['Contrari', 'Antonimi', '-ant-']).filter(s => !spoilerRe.test(normalize(s)));
+    const extra = [];
+    if (syn.length) extra.push('Sinonimo di: ' + syn[0]);
+    if (ant.length) extra.push('Contrario di: ' + ant[0]);
+    // Dà un po' di varietà: a volte preferisce sinonimo/contrario a una definizione vera e propria.
+    if (extra.length && (!candidates.length || Math.random() < 0.35)){
+      return truncateWords(extra[Math.floor(Math.random() * extra.length)], DEF_MAX_LEN);
+    }
+    candidates.push(...extra);
+    if (!candidates.length) return null;
+    return pickBestCandidate(candidates);
+  } catch (e) { return null; }
+}
+/* Estrae un elenco di parole da una sezione del wikitesto (es. Sinonimi,
+   Contrari), riconoscendo sia i link [[...]] sia le liste separate da virgola. */
+function extractWordList(wt, headingWords){
+  const lines = wt.split('\n');
+  const re = new RegExp('^(\\{\\{\\s*(?:' + headingWords.join('|') + ')\\s*\\}\\}|===?\\s*(?:' + headingWords.join('|') + ')\\s*===?)', 'i');
+  for (let i = 0; i < lines.length; i++){
+    if (!re.test(lines[i].trim())) continue;
+    const words = [];
+    for (let j = i + 1; j < lines.length; j++){
+      const l = lines[j].trim();
+      if (!l){ if (words.length) break; else continue; }
+      if (/^(\{\{|==)/.test(l)) break;
+      const linkMatches = [...l.matchAll(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g)].map(m => m[1]);
+      if (linkMatches.length) words.push(...linkMatches);
+      else l.replace(/^[:*#]+\s*/, '').split(/[,;]/).map(s => s.trim()).filter(Boolean).forEach(w => words.push(w));
+    }
+    return words.filter(Boolean);
+  }
+  return [];
+}
+function pickBestCandidate(candidates){
+  let best = candidates[0], bestDiff = Infinity;
+  for (const c of candidates){
+    const len = c.split(/\s+/).filter(Boolean).length;
+    const diff = Math.abs(len - DEF_TARGET_LEN);
+    if (diff < bestDiff){ bestDiff = diff; best = c; }
+  }
+  return truncateWords(best, DEF_MAX_LEN);
+}
+/* Data una lista (ampia) di parole candidate, restituisce fino a `count` coppie
+   {word, def} con una vera definizione trovata, scartando le parole senza. */
+async function fetchDefinitionPairs(candidates, count){
+  const defs = await Promise.all(candidates.map(fetchDefinition));
+  const pairs = candidates.map((w, i) => ({ word: w, def: defs[i] })).filter(p => p.def);
+  return pairs.slice(0, count);
 }
 
 /* ---------------- Griglia ---------------- */
@@ -774,10 +963,10 @@ function updatePathUI(){
 
 let msgTimer = null;
 function toast(text, kind){
-  const m = $('#msg');
-  m.textContent = text; m.className = 'msg ' + (kind || '');
+  const targets = ['#msg', '#msgSetup', '#msgLobby'].map(sel => $(sel)).filter(Boolean);
+  for (const m of targets){ m.textContent = text; m.className = 'msg ' + (kind || ''); }
   clearTimeout(msgTimer);
-  msgTimer = setTimeout(() => { m.textContent = ''; m.className = 'msg'; }, 1800);
+  msgTimer = setTimeout(() => { for (const m of targets){ m.textContent = ''; m.className = 'msg'; } }, 1800);
 }
 function animate(cls){
   const b = $('#board'); b.classList.remove('shake', 'pop'); void b.offsetWidth; b.classList.add(cls);
@@ -786,6 +975,17 @@ function animate(cls){
 function submitPath(path){
   if (!path || !path.length) return;
   const word = pathWord(path);
+  if (S.defMode){
+    if (S.defFound) return;
+    if (word !== S.defTarget){ toast('Non è la parola giusta', 'bad'); animate('shake'); return; }
+    S.defFound = true;
+    flashTiles(path);
+    toast('Trovata! ' + word, 'ok');
+    if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} }
+    Snd.correct();
+    if (MP.active) MP.reportDefFound(); else defHostFinishRound(meId());
+    return;
+  }
   if (word.length < S.minLen){ toast(`Servono almeno ${S.minLen} lettere`, 'bad'); return; }
   if (S.found.has(word)){ toast('Parola già trovata', 'bad'); return; }
   if (!isValidWord(word)){ toast(word + ': parola non valida', 'bad'); return; }
@@ -800,11 +1000,11 @@ function submitPath(path){
   if (MP.active) MP.reportWord(word, pts);
 }
 
-function flashTiles(path){
+function flashTiles(path, duration){
   const tiles = grid.querySelectorAll('.tile');
   const els = path.map(i => tiles[i]).filter(Boolean);
   els.forEach(el => el.classList.add('ok'));
-  setTimeout(() => els.forEach(el => el.classList.remove('ok')), 450);
+  setTimeout(() => els.forEach(el => el.classList.remove('ok')), duration || 450);
 }
 
 function addFoundChip(word, pts){
@@ -913,25 +1113,147 @@ function startGame(){
   storeSet('intreccio:settings', JSON.stringify({ n: S.n, time: S.time, minLen: S.minLen }));
   S.NB = buildNeighbors(S.n);
   S.grid = genGrid(S.n); S.bonus = genBonus(S.n);
+  S.defMode = false; S.defTarget = ''; S.defWinnerId = null; S.defWords = []; S.defLastCount = null;
   S.startAt = Date.now() + COUNTDOWN_MS;
   S.endAt = S.startAt + S.time * 1000;
   Snd.unlock();
   if (MP.active && MP.isHost) broadcastStart();
   beginRound();
 }
+/* ---------------- Modalità definizioni ---------------- */
+function shuffledSolvableWords(){
+  if (!dict.ready) return [];
+  const all = solveAll();
+  const words = [...all.keys()].filter(w => w.length >= Math.max(S.minLen, 3));
+  for (let i = words.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [words[i], words[j]] = [words[j], words[i]]; }
+  return words;
+}
+async function startDefinitionsGame(count){
+  readSettings();
+  storeSet('intreccio:settings', JSON.stringify({ n: S.n, time: S.time, minLen: S.minLen }));
+  S.NB = buildNeighbors(S.n);
+  S.grid = genGrid(S.n); S.bonus = genBonus(S.n);
+  const pool = shuffledSolvableWords();
+  if (!pool.length){ toast('Nessuna parola trovata sulla griglia: riprova', 'bad'); return; }
+  const busyBtns = [$('#defConfirmBtn'), $('#lobbyDefConfirmBtn')].filter(Boolean);
+  busyBtns.forEach(b => { b.disabled = true; });
+  toast('Preparo le definizioni…', '');
+  const BATCH = 12;
+  let pairs = [], offset = 0;
+  try {
+    while (pairs.length < count && offset < pool.length){
+      const batch = pool.slice(offset, offset + BATCH);
+      offset += batch.length;
+      pairs = pairs.concat(await fetchDefinitionPairs(batch, count - pairs.length));
+    }
+  } finally { busyBtns.forEach(b => { b.disabled = false; }); }
+  if (!pairs.length){ toast('Impossibile trovare definizioni: riprova', 'bad'); return; }
+  if (pairs.length < count) toast(`Trovate solo ${pairs.length} definizioni disponibili`, 'bad');
+  const words = pairs.map(p => p.word), clues = pairs.map(p => p.def);
+  S.defMode = true; S.defWordTime = 20; S.defWords = words; S.defClues = clues; S.defScores = new Map(); S.defHistory = [];
+  S.defRoundNum = 0; S.defTarget = words[0]; S.defFound = false; S.defWinnerId = null;
+  S.defLastCount = count;
+  S.startAt = Date.now() + COUNTDOWN_MS;
+  S.endAt = S.startAt + S.defWordTime * 1000;
+  Snd.unlock();
+  if (MP.active && MP.isHost) broadcastStart();
+  beginRound();
+}
+/* "Gioca ancora": ripete la stessa modalità appena conclusa (definizioni con
+   lo stesso numero di parole, oppure partita normale). */
+function playAgain(){
+  if (S.defMode || S.defLastCount){ startDefinitionsGame(S.defLastCount || 5); }
+  else { startGame(); }
+}
+/* Chiamata quando il round della parola corrente termina (vinto o scaduto).
+   È autoritativa: la esegue solo chi decide, cioè il giocatore in solitaria
+   o l'host in multigiocatore; gli altri ricevono il risultato via rete. */
+function defHostFinishRound(winnerId){
+  if (!S.roundActive) return;
+  S.roundActive = false; S.running = false; clearInterval(S.timer); clearInterval(S.countdownTimer);
+  S.dragging = false; S.path = []; S.typed = ''; updatePathUI();
+  const word = S.defTarget;
+  if (winnerId) S.defScores.set(winnerId, (S.defScores.get(winnerId) || 0) + 1);
+  const nextIndex = S.defRoundNum + 1;
+  const done = nextIndex >= S.defWords.length;
+  const startAt = done ? 0 : Date.now() + 3000;
+  const endAt = done ? 0 : startAt + S.defWordTime * 1000;
+  const payload = { roundNum: nextIndex, word, winnerId: winnerId || null, scores: [...S.defScores.entries()], startAt, endAt, done };
+  if (MP.active && MP.isHost) for (const conn of MP.conns.values()) conn.send({ type:'defRound', payload });
+  defApplyRoundResult(payload);
+}
+/* Applica il risultato del round appena concluso e prepara il successivo
+   (o la schermata finale). Usata sia in locale sia ricevendo dati dall'host. */
+function defApplyRoundResult(p){
+  S.defScores = new Map(p.scores);
+  S.defHistory.push({ word: p.word, winnerId: p.winnerId || null });
+  const nameOf = id => id === meId() ? 'Tu' : ((MP.players.get(id) || {}).name || 'Un giocatore');
+  const name = p.winnerId ? nameOf(p.winnerId) : null;
+  toast(name ? `${p.word} — ${name}` : `Tempo scaduto: ${p.word}`, name ? 'ok' : 'bad');
+  if (p.done){ setTimeout(defFinishGame, 3000); return; }
+  S.defRoundNum = p.roundNum;
+  S.defTarget = S.defWords[p.roundNum];
+  S.defFound = false; S.defWinnerId = null;
+  S.startAt = p.startAt; S.endAt = p.endAt;
+  $('#defTargetWord').textContent = S.defClues[p.roundNum] || S.defTarget;
+  $('#defProgress').textContent = `Parola ${p.roundNum + 1} di ${S.defWords.length}`;
+  S.dragging = false; S.path = []; S.typed = ''; updatePathUI();
+  S.roundActive = true;
+  clearInterval(S.timer); clearInterval(S.countdownTimer);
+  startCountdown(p.word + (name ? ' — ' + name : ''));
+}
+function defFinishGame(){
+  S.roundActive = false;
+  renderBoardRef(); highlightBoardRefPath(null);
+  $('#missedBox').hidden = true; $('#lbBox').hidden = true;
+  const nameOf = id => id === meId() ? 'Tu' : ((MP.players.get(id) || {}).name || 'Giocatore');
+  const wordsByPlayer = new Map();
+  for (const h of S.defHistory){
+    if (!h.winnerId) continue;
+    if (!wordsByPlayer.has(h.winnerId)) wordsByPlayer.set(h.winnerId, []);
+    wordsByPlayer.get(h.winnerId).push(h.word);
+  }
+  const entries = [...S.defScores.entries()].sort((a, b) => b[1] - a[1]);
+  const top = entries.length ? entries[0][1] : 0;
+  const winners = entries.filter(([, c]) => c === top && top > 0).map(([id]) => nameOf(id));
+  $('#overScore').textContent = '';
+  $('#overRecord').innerHTML = '';
+  const list = entries.length
+    ? '<ul class="def-final">' + entries.map(([id, c]) => {
+        const words = wordsByPlayer.get(id) || [];
+        const wordsHtml = words.length
+          ? '<ul class="missed">' + words.map(w => `<li>${escapeHtml(w)}</li>`).join('') + '</ul>'
+          : '';
+        return `<li><div class="row">${escapeHtml(nameOf(id))}<b>${c}</b></div>${wordsHtml}</li>`;
+      }).join('') + '</ul>'
+    : '<p>Nessuno ha trovato parole.</p>';
+  $('#overStats').innerHTML = (winners.length
+    ? (winners.length > 1 ? `Pareggio tra <b>${winners.map(escapeHtml).join(', ')}</b>.` : `Ha vinto <b>${escapeHtml(winners[0])}</b>.`)
+    : 'Nessun vincitore: nessuna parola trovata.') + list;
+  $('#overRest').hidden = false;
+  updateOverActions();
+  $('#over').hidden = false;
+  $('#againBtn').focus();
+}
 function beginRound(){
   S.path = []; S.typed = ''; S.found = new Map(); S.score = 0; S.dragging = false;
-  S.running = false; S.roundActive = true; S.lastTickSec = null;
+  S.running = false; S.roundActive = true; S.lastTickSec = null; S.defFound = false;
+  $('#defTargetBox').hidden = !S.defMode;
+  if (S.defMode){
+    $('#defTargetWord').textContent = S.defClues[S.defRoundNum] || S.defTarget;
+    $('#defProgress').textContent = `Parola ${S.defRoundNum + 1} di ${S.defWords.length}`;
+  }
 
   $('#setup').hidden = true; $('#lobby').hidden = true; $('#over').hidden = true; $('#game').hidden = false;
   clearTimeout(revealScheduleId); clearTimeout(revealTimerId); revealFastForward = null;
   $('#revealBox').hidden = true; $('#revealLog').innerHTML = ''; $('#revealBars').innerHTML = '';
+  { const f = $('#revealProgressFill'), l = $('#revealProgressLabel'); if (f) f.style.width = '0%'; if (l) l.textContent = '0 / 0'; }
   $('#revealWordText').textContent = ''; $('#revealWordText').classList.remove('show'); $('#revealWordTags').innerHTML = '';
   $('#score').textContent = '0';
   $('#found').innerHTML = ''; $('#foundEmpty').hidden = false; $('#foundCount').textContent = '0';
   $('#msg').textContent = '';
   $('#permNote').hidden = dict.ready;
-  $('#timeVal').textContent = fmt(S.time);
+  $('#timeVal').textContent = fmt(S.defMode ? S.defWordTime : S.time);
   $('#barFill').style.width = '100%';
   $('#timeBox').classList.remove('low'); $('#bar').classList.remove('low');
   if (MP.active) mpResetRound();
@@ -939,14 +1261,23 @@ function beginRound(){
   clearInterval(S.timer); clearInterval(S.countdownTimer);
   startCountdown();
 }
-function startCountdown(){
+function startCountdown(revealText){
   const box = $('#boardCount'), num = $('#boardCountNum');
   box.hidden = false;
   let shown = null;
+  if (revealText){ num.textContent = revealText; num.className = 'winner'; }
   function upd(){
     const remain = S.startAt - Date.now();
-    if (remain <= 250){
+    const threshold = revealText ? 0 : 250;
+    if (remain <= threshold){
       clearInterval(S.countdownTimer);
+      if (revealText){
+        box.hidden = true;
+        S.running = true; S.lastTickSec = null;
+        tick();
+        clearInterval(S.timer); S.timer = setInterval(tick, 100);
+        return;
+      }
       num.textContent = 'Via!'; num.className = 'go';
       setTimeout(() => {
         box.hidden = true;
@@ -956,40 +1287,82 @@ function startCountdown(){
       }, remain > 0 ? remain : 0);
       return;
     }
-    const n = Math.ceil(remain / 1000);
-    if (n !== shown){
-      shown = n;
-      num.textContent = String(n); num.className = '';
-      void num.offsetWidth; num.style.animation = 'none'; void num.offsetWidth; num.style.animation = '';
-      Snd.beep(n <= 1);
+    if (!revealText){
+      const n = Math.ceil(remain / 1000);
+      if (n !== shown){
+        shown = n;
+        num.textContent = String(n); num.className = '';
+        void num.offsetWidth; num.style.animation = 'none'; void num.offsetWidth; num.style.animation = '';
+        Snd.beep(n <= 1);
+      }
+    } else {
+      const n = Math.ceil(remain / 1000);
+      if (n !== shown){
+        shown = n;
+        Snd.beep(n <= 1);
+      }
     }
   }
   upd();
   S.countdownTimer = setInterval(upd, 100);
 }
 function tick(){
+  const total = S.defMode ? S.defWordTime * 1000 : S.time * 1000;
   const ms = Math.max(0, S.endAt - Date.now());
   const sec = Math.ceil(ms / 1000);
   $('#timeVal').textContent = fmt(sec);
-  $('#barFill').style.width = (ms / (S.time * 1000) * 100) + '%';
-  const low = sec <= 10;
+  $('#barFill').style.width = (ms / total * 100) + '%';
+  const lowAt = S.defMode ? 3 : 10;
+  const low = sec <= lowAt;
   $('#timeBox').classList.toggle('low', low); $('#bar').classList.toggle('low', low);
   if (low && sec >= 1 && sec !== S.lastTickSec){
     S.lastTickSec = sec;
-    Snd.beep(sec <= 5);
+    Snd.beep(sec <= (S.defMode ? 1 : 5));
   }
-  if (ms <= 0) endGame();
+  if (ms <= 0){
+    clearInterval(S.timer);
+    if (S.defMode){ if (!MP.active || MP.isHost) defHostFinishRound(null); }
+    else endGame();
+  }
 }
 
 function renderBoardRef(){
   const box = $('#boardRef');
   box.style.setProperty('--n', S.n);
-  let html = '';
+  let html = '<svg class="ribbon" aria-hidden="true"><polyline points=""/></svg>';
   S.grid.forEach((t, i) => {
     const b = S.bonus[i];
-    html += `<div class="tile${b ? ' b-' + b : ''}"><span class="ch">${t.text}</span></div>`;
+    html += `<div class="tile${b ? ' b-' + b : ''}" data-i="${i}"><span class="ch">${t.text}</span></div>`;
   });
   box.innerHTML = html;
+}
+function highlightBoardRefPath(path){
+  const box = $('#boardRef');
+  if (!box) return;
+  const tiles = box.querySelectorAll('.tile');
+  tiles.forEach(el => { el.classList.remove('sel'); const s = el.querySelector('.step'); if (s) s.remove(); });
+  const svg = box.querySelector('.ribbon');
+  const poly = svg && svg.querySelector('polyline');
+  if (path && path.length){
+    path.forEach((i, idx) => {
+      const el = tiles[i];
+      if (!el) return;
+      el.classList.add('sel');
+      const span = document.createElement('span');
+      span.className = 'step'; span.textContent = String(idx + 1);
+      el.appendChild(span);
+    });
+    if (svg && poly){
+      const w = box.clientWidth, h = box.clientHeight;
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      const pts = path.map(i => {
+        const el = tiles[i]; if (!el) return null;
+        return (el.offsetLeft + el.offsetWidth / 2) + ',' + (el.offsetTop + el.offsetHeight / 2);
+      }).filter(Boolean).join(' ');
+      poly.setAttribute('points', pts);
+      poly.setAttribute('stroke-width', tiles[0] ? tiles[0].offsetWidth * 0.16 : 4);
+    }
+  } else if (poly) poly.setAttribute('points', '');
 }
 
 function endGame(){
@@ -998,6 +1371,8 @@ function endGame(){
   $('#boardCount').hidden = true;
   S.dragging = false; S.path = []; S.typed = ''; updatePathUI();
   Snd.buzz();
+
+  if (S.defMode){ defFinishGame(); return; }
 
   const prev = +storeGet(recKey()) || 0;
   const isRecord = S.score > prev && S.score > 0;
@@ -1052,14 +1427,14 @@ function showMissed(){
   if (!longest.length) return;
   $('#missedInfo').textContent = `Nella griglia c'erano almeno ${all.size} parole; tu ne hai trovate ${S.found.size}.`;
   $('#missed').innerHTML = longest.map(([w, p]) =>
-    `<li${S.found.has(w) ? ' class="hit"' : ''}>${w}<b>${p}</b></li>`).join('');
+    `<li${S.found.has(w) ? ' class="hit"' : ''} data-word="${w}">${w}<b>${p}</b></li>`).join('');
   $('#missedBox').hidden = false;
 }
 
 /* ---------------- Multigiocatore ---------------- */
 const MP = {
   active:false, isHost:false, peer:null, hostConn:null, conns:new Map(),
-  code:'', myId:'', myName:'', players:new Map()
+  code:'', myId:'', myName:'', players:new Map(), clockOffset:0, bestSyncRtt:Infinity
 };
 
 const SOLO_ID = 'solo';
@@ -1155,6 +1530,7 @@ function joinLobby(){
       clearMpConnectTimer();
       MP.active = true; setMpNote('');
       conn.send({ type: 'hello', name });
+      startClockSync();
       showLobby();
     });
     conn.on('data', data => handleData(conn, data));
@@ -1172,6 +1548,15 @@ function setupHostConn(conn){
     broadcastPlayers();
   });
 }
+/* Sincronizza l'orologio del client con quello dell'host (stile NTP), così il
+   conto alla rovescia, la fine del tempo e l'animazione finale partono nello
+   stesso istante reale per entrambi, anche se gli orologi dei dispositivi non
+   sono allineati. */
+function startClockSync(){
+  MP.bestSyncRtt = Infinity; MP.clockOffset = 0;
+  const ping = () => { if (MP.hostConn) MP.hostConn.send({ type:'sync', t0: Date.now() }); };
+  ping(); setTimeout(ping, 150); setTimeout(ping, 350); setTimeout(ping, 600); setTimeout(ping, 900);
+}
 function handleData(conn, msg){
   if (!msg || !msg.type) return;
   if (MP.isHost){
@@ -1185,6 +1570,12 @@ function handleData(conn, msg){
     } else if (msg.type === 'leave'){
       MP.conns.delete(conn.peer); MP.players.delete(conn.peer);
       broadcastPlayers();
+    } else if (msg.type === 'sync'){
+      conn.send({ type:'syncAck', t0: msg.t0, t1: Date.now() });
+    } else if (msg.type === 'foundDef'){
+      if (S.roundActive && S.defMode && msg.roundNum === S.defRoundNum){
+        defHostFinishRound(conn.peer);
+      }
     }
   } else {
     if (msg.type === 'players'){
@@ -1193,12 +1584,21 @@ function handleData(conn, msg){
     } else if (msg.type === 'start'){
       startFromNetwork(msg);
     } else if (msg.type === 'final'){
+      if (S.roundActive) endGame();
       renderLeaderboard(msg.lb, (msg.bonusWords && msg.bonusWords[MP.myId]) || []);
       if (msg.words) renderPlayerWords(msg.lb, msg.words);
-      if (msg.lb && msg.lb.length >= 1 && msg.words && msg.words.length) scheduleReveal(msg.words, msg.lb, msg.revealStartAt);
+      if (msg.lb && msg.lb.length >= 1 && msg.words && msg.words.length) scheduleReveal(msg.words, msg.lb, (msg.revealStartAt || Date.now()) - MP.clockOffset);
       else $('#overRest').hidden = false;
     } else if (msg.type === 'revealSkip'){
       triggerRevealSkip();
+    } else if (msg.type === 'defRound'){
+      clearInterval(S.timer); clearInterval(S.countdownTimer);
+      const p = Object.assign({}, msg.payload);
+      if (!p.done){ p.startAt -= MP.clockOffset; p.endAt -= MP.clockOffset; }
+      defApplyRoundResult(p);
+    } else if (msg.type === 'syncAck'){
+      const t2 = Date.now(), rtt = t2 - msg.t0;
+      if (rtt < MP.bestSyncRtt){ MP.bestSyncRtt = rtt; MP.clockOffset = (msg.t1 + rtt / 2) - t2; }
     }
   }
 }
@@ -1217,6 +1617,7 @@ function renderLobbyPlayers(){
   }).join('');
   $('#lobbyPlayers').innerHTML = rows || '<li class="empty">Nessun giocatore.</li>';
   $('#lobbyStartBtn').hidden = !MP.isHost;
+  $('#lobbyDefBtn').hidden = !MP.isHost;
   $('#lobbyWait').hidden = MP.isHost;
 }
 function showLobby(){
@@ -1234,14 +1635,27 @@ function leaveLobby(){
 }
 function broadcastStart(){
   for (const conn of MP.conns.values())
-    conn.send({ type:'start', n:S.n, time:S.time, minLen:S.minLen, grid:S.grid, bonus:S.bonus, startAt:S.startAt, endAt:S.endAt });
+    conn.send({ type:'start', n:S.n, time:S.time, minLen:S.minLen, grid:S.grid, bonus:S.bonus, startAt:S.startAt, endAt:S.endAt, defMode:S.defMode, defWords:S.defWords, defClues:S.defClues, defWordTime:S.defWordTime });
 }
 function startFromNetwork(msg){
   S.n = msg.n; S.time = msg.time; S.minLen = msg.minLen || 3; S.grid = msg.grid; S.bonus = msg.bonus;
-  S.startAt = msg.startAt || Date.now(); S.endAt = msg.endAt;
+  S.startAt = (msg.startAt || Date.now()) - MP.clockOffset; S.endAt = msg.endAt - MP.clockOffset;
+  S.defMode = !!msg.defMode;
+  if (S.defMode){
+    S.defWords = msg.defWords || []; S.defClues = msg.defClues || S.defWords; S.defWordTime = msg.defWordTime || 20;
+    S.defRoundNum = 0; S.defTarget = S.defWords[0] || ''; S.defScores = new Map(); S.defWinnerId = null; S.defHistory = [];
+  } else { S.defWords = []; S.defClues = []; }
   S.NB = buildNeighbors(S.n);
   beginRound();
 }
+function mpReportDefFound(){
+  if (MP.isHost){
+    if (S.roundActive && S.defMode) defHostFinishRound(MP.myId);
+  } else if (MP.hostConn){
+    MP.hostConn.send({ type:'foundDef', roundNum: S.defRoundNum });
+  }
+}
+MP.reportDefFound = mpReportDefFound;
 function mpResetRound(){
   if (MP.isHost) for (const p of MP.players.values()) p.words = new Map();
 }
@@ -1279,7 +1693,10 @@ function computeFinal(players = MP.players, solo = false){
     const entries = ids.map(id => ({ id, pts: players.get(id).words.get(w) }));
     const total = entries.reduce((s, e) => s + (uniq ? e.pts * 2 : e.pts), 0);
     return { word: w, uniq, entries, total };
-  }).sort((a, b) => a.total - b.total || a.word.localeCompare(b.word));
+  }).sort((a, b) => {
+    const ac = a.entries.length > 1 ? 0 : 1, bc = b.entries.length > 1 ? 0 : 1;
+    return ac - bc || a.total - b.total || a.word.localeCompare(b.word);
+  });
   return { lb, bonusWords, words };
 }
 function renderLeaderboard(lb, myBonusWords){
@@ -1303,7 +1720,7 @@ function startReveal(words, lb, baseAt){
   const maxScore = Math.max(1, ...lb.map(p => p.score));
 
   $('#revealBars').innerHTML = order.map((id, i) =>
-    `<div class="rb-row p${i + 1}"><div class="rb-top"><span>${escapeHtml(names.get(id))}</span>` +
+    `<div class="rb-row p${i + 1}" data-pid="${id}"><div class="rb-top"><span>${escapeHtml(names.get(id))}</span>` +
     `<span class="rb-score" id="rbScore-${id}">0</span></div>` +
     `<div class="rb-track"><div class="rb-fill" id="rbFill-${id}" style="width:0%"></div></div></div>`).join('');
   $('#revealLog').innerHTML = '';
@@ -1311,6 +1728,21 @@ function startReveal(words, lb, baseAt){
   $('#revealWordTags').innerHTML = '';
   $('#revealBox').hidden = false;
   $('#revealSkip').hidden = !(MP.isHost || !MP.active);
+
+  function updateProgress(done){
+    const total = words.length;
+    const fill = $('#revealProgressFill'), label = $('#revealProgressLabel');
+    if (fill) fill.style.width = (total ? done / total * 100 : 100) + '%';
+    if (label) label.textContent = done + ' / ' + total;
+  }
+  function highlightRows(ids){
+    document.querySelectorAll('#revealBars .rb-row.active').forEach(el => el.classList.remove('active'));
+    for (const id of ids){
+      const row = document.querySelector('#revealBars .rb-row[data-pid="' + id + '"]');
+      if (row) row.classList.add('active');
+    }
+  }
+  updateProgress(0);
 
   let i = 0;
   function finish(){
@@ -1322,6 +1754,9 @@ function startReveal(words, lb, baseAt){
     $('#revealWordText').classList.remove('show');
     $('#revealSkip').hidden = true;
     $('#revealLog').innerHTML = '';
+    highlightRows([]);
+    updateProgress(words.length);
+    highlightBoardRefPath(null);
     $('#overRest').hidden = false;
   }
   function applyWord(w, animate){
@@ -1330,6 +1765,8 @@ function startReveal(words, lb, baseAt){
       $('#revealWordText').classList.remove('show'); void $('#revealWordText').offsetWidth; $('#revealWordText').classList.add('show');
       $('#revealWordTags').innerHTML = w.entries.map(e =>
         `<span class="${e.id === meId() ? 'mine' : ''}${w.uniq ? ' x2b' : ''}">${escapeHtml(names.get(e.id) || '?')} +${w.uniq ? e.pts * 2 : e.pts}${w.uniq ? ' ×2' : ''}</span>`).join('');
+      highlightRows(w.entries.map(e => e.id));
+      highlightBoardRefPath(findBestPath(w.word));
     }
     for (const e of w.entries){
       const add = w.uniq ? e.pts * 2 : e.pts;
@@ -1340,6 +1777,7 @@ function startReveal(words, lb, baseAt){
     }
     const li = document.createElement('li');
     const tot = w.entries.reduce((s, e) => s + (w.uniq ? e.pts * 2 : e.pts), 0);
+    li.dataset.word = w.word;
     li.innerHTML = `${w.word}<b>+${tot}</b>`;
     $('#revealLog').insertBefore(li, $('#revealLog').firstChild);
     if (animate) Snd.beep(false);
@@ -1348,12 +1786,14 @@ function startReveal(words, lb, baseAt){
     clearTimeout(revealTimerId);
     while (i < words.length) applyWord(words[i++], false);
     $('#revealWordTags').innerHTML = '';
+    updateProgress(i);
     finish();
   };
   function step(){
     if (revealSkip){ return; }
     if (i >= words.length){ finish(); return; }
     applyWord(words[i++], true);
+    updateProgress(i);
     if (i >= words.length){ finish(); return; }
     const wait = Math.max(0, revealBaseAt + i * REVEAL_STEP_MS - Date.now());
     revealTimerId = setTimeout(step, wait);
@@ -1383,7 +1823,7 @@ function renderPlayerWords(lb, words){
     const old = li.querySelector('ul.missed'); if (old) old.remove();
     const arr = (byPlayer.get(p.id) || []).sort((a, b) => b.word.length - a.word.length || b.pts - a.pts);
     const items = arr.length
-      ? arr.map(x => `<li${x.uniq ? ' class="x2w"' : ''}>${escapeHtml(x.word)}<b>${x.pts}${x.uniq ? ' ×2' : ''}</b></li>`).join('')
+      ? arr.map(x => `<li${x.uniq ? ' class="x2w"' : ''} data-word="${x.word}">${escapeHtml(x.word)}<b>${x.pts}${x.uniq ? ' ×2' : ''}</b></li>`).join('')
       : '<li class="empty-note">Nessuna parola trovata.</li>';
     li.insertAdjacentHTML('beforeend', `<ul class="missed">${items}</ul>`);
   });
@@ -1432,13 +1872,37 @@ $('#createLobbyBtn').addEventListener('click', createLobby);
 $('#joinLobbyBtn').addEventListener('click', joinLobby);
 $('#lobbyStartBtn').addEventListener('click', startGame);
 $('#lobbyLeaveBtn').addEventListener('click', leaveLobby);
-$('#againBtn').addEventListener('click', startGame);
+$('#againBtn').addEventListener('click', playAgain);
 $('#menuBtn').addEventListener('click', () => {
   $('#over').hidden = true; $('#game').hidden = true;
   if (MP.active){ $('#lobby').hidden = false; renderLobbyPlayers(); }
   else { $('#setup').hidden = false; showRecord(); }
 });
 $('#quitBtn').addEventListener('click', () => { if (S.roundActive) endGame(); });
+$('#over').addEventListener('click', e => {
+  const li = e.target.closest('li[data-word]');
+  if (!li || !S.grid || !S.grid.length) return;
+  const path = findBestPath(li.dataset.word);
+  if (!path) return;
+  highlightBoardRefPath(path);
+  document.querySelectorAll('#over li[data-word].active').forEach(x => x.classList.remove('active'));
+  li.classList.add('active');
+  $('#boardRef').scrollIntoView({ behavior:'smooth', block:'center' });
+});
+$('#defModeBtn').addEventListener('click', () => { $('#defCountBox').hidden = false; });
+$('#defCancelBtn').addEventListener('click', () => { $('#defCountBox').hidden = true; });
+$('#defConfirmBtn').addEventListener('click', () => {
+  const n = +document.querySelector('input[name=defCount]:checked').value;
+  $('#defCountBox').hidden = true;
+  startDefinitionsGame(n);
+});
+$('#lobbyDefBtn').addEventListener('click', () => { $('#lobbyDefCountBox').hidden = false; });
+$('#lobbyDefCancelBtn').addEventListener('click', () => { $('#lobbyDefCountBox').hidden = true; });
+$('#lobbyDefConfirmBtn').addEventListener('click', () => {
+  const n = +document.querySelector('input[name=lobbyDefCount]:checked').value;
+  $('#lobbyDefCountBox').hidden = true;
+  startDefinitionsGame(n);
+});
 $('#muteBtn').addEventListener('click', () => {
   const m = Snd.toggleMute();
   $('#muteBtn').textContent = m ? '🔇' : '🔊';
