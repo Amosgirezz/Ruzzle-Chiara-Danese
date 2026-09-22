@@ -720,7 +720,34 @@ function stripHtml(html){
 function truncateWords(s, n){
   const parts = s.split(/\s+/).filter(Boolean);
   if (parts.length <= n) return parts.join(' ');
-  return parts.slice(0, n).join(' ') + '…';
+  const trimmed = trimTrailingStopwords(parts.slice(0, n));
+  return trimmed.join(' ') + '…';
+}
+/* Elenco di parole "di servizio" (articoli, preposizioni, congiunzioni,
+   pronomi relativi) su cui è brutto interrompere una definizione troncata:
+   se il taglio cade proprio dopo una di queste, la si rimuove e si
+   riprova, così l'indizio non finisce a metà frase in modo innaturale. */
+const DEF_STOPWORDS = new Set(['e','o','ed','od','di',"d'",'a',"a'",'da',"da'",'in','con','su','per','tra','fra',
+  'il','lo','la','i','gli','le','un','uno','una',
+  'che','chi','cui','cioè',
+  'dei','degli','delle','del','dello','della',
+  'al','allo','alla','ai','agli','alle',
+  'dal','dallo','dalla','dai','dagli','dalle',
+  'nel','nello','nella','nei','negli','nelle',
+  'sul','sullo','sulla','sui','sugli','sulle',
+  'col','coi','non','si','ne','ci','vi','se','ma','però','anche','ogni',
+  'come','quando','mentre','senza','sopra','sotto','contro','verso',
+  'secondo','durante','mediante','tramite',
+  'suo','sua','suoi','sue','loro','proprio','propria',
+  'più','meno','molto','poco','un\''
+]);
+function trimTrailingStopwords(words){
+  const arr = words.slice();
+  while (arr.length > 3){
+    const last = arr[arr.length - 1].toLowerCase().replace(/[.,;:!?…]+$/, '');
+    if (DEF_STOPWORDS.has(last)) arr.pop(); else break;
+  }
+  return arr;
 }
 /* Vero se `s` è composta da una sola parola (es. un semplice sinonimo secco):
    queste vengono scartate perché troppo povere come indizio. */
@@ -818,8 +845,12 @@ function extractWordList(wt, headingWords){
   return [];
 }
 function pickBestCandidate(candidates){
-  let best = candidates[0], bestDiff = Infinity;
-  for (const c of candidates){
+  // Preferisce definizioni che rientrano già nel limite di parole senza
+  // bisogno di essere troncate: risultano più complete e naturali.
+  const fitting = candidates.filter(c => c.split(/\s+/).filter(Boolean).length <= DEF_MAX_LEN);
+  const pool = fitting.length ? fitting : candidates;
+  let best = pool[0], bestDiff = Infinity;
+  for (const c of pool){
     const len = c.split(/\s+/).filter(Boolean).length;
     const diff = Math.abs(len - DEF_TARGET_LEN);
     if (diff < bestDiff){ bestDiff = diff; best = c; }
