@@ -1059,7 +1059,7 @@ function showMissed(){
 /* ---------------- Multigiocatore ---------------- */
 const MP = {
   active:false, isHost:false, peer:null, hostConn:null, conns:new Map(),
-  code:'', myId:'', myName:'', players:new Map()
+  code:'', myId:'', myName:'', players:new Map(), clockOffset:0, bestSyncRtt:Infinity
 };
 
 const SOLO_ID = 'solo';
@@ -1155,6 +1155,7 @@ function joinLobby(){
       clearMpConnectTimer();
       MP.active = true; setMpNote('');
       conn.send({ type: 'hello', name });
+      startClockSync();
       showLobby();
     });
     conn.on('data', data => handleData(conn, data));
@@ -1172,6 +1173,15 @@ function setupHostConn(conn){
     broadcastPlayers();
   });
 }
+/* Sincronizza l'orologio del client con quello dell'host (stile NTP), così il
+   conto alla rovescia, la fine del tempo e l'animazione finale partono nello
+   stesso istante reale per entrambi, anche se gli orologi dei dispositivi non
+   sono allineati. */
+function startClockSync(){
+  MP.bestSyncRtt = Infinity; MP.clockOffset = 0;
+  const ping = () => { if (MP.hostConn) MP.hostConn.send({ type:'sync', t0: Date.now() }); };
+  ping(); setTimeout(ping, 150); setTimeout(ping, 350); setTimeout(ping, 600); setTimeout(ping, 900);
+}
 function handleData(conn, msg){
   if (!msg || !msg.type) return;
   if (MP.isHost){
@@ -1185,6 +1195,8 @@ function handleData(conn, msg){
     } else if (msg.type === 'leave'){
       MP.conns.delete(conn.peer); MP.players.delete(conn.peer);
       broadcastPlayers();
+    } else if (msg.type === 'sync'){
+      conn.send({ type:'syncAck', t0: msg.t0, t1: Date.now() });
     }
   } else {
     if (msg.type === 'players'){
@@ -1193,12 +1205,16 @@ function handleData(conn, msg){
     } else if (msg.type === 'start'){
       startFromNetwork(msg);
     } else if (msg.type === 'final'){
+      if (S.roundActive) endGame();
       renderLeaderboard(msg.lb, (msg.bonusWords && msg.bonusWords[MP.myId]) || []);
       if (msg.words) renderPlayerWords(msg.lb, msg.words);
-      if (msg.lb && msg.lb.length >= 1 && msg.words && msg.words.length) scheduleReveal(msg.words, msg.lb, msg.revealStartAt);
+      if (msg.lb && msg.lb.length >= 1 && msg.words && msg.words.length) scheduleReveal(msg.words, msg.lb, (msg.revealStartAt || Date.now()) - MP.clockOffset);
       else $('#overRest').hidden = false;
     } else if (msg.type === 'revealSkip'){
       triggerRevealSkip();
+    } else if (msg.type === 'syncAck'){
+      const t2 = Date.now(), rtt = t2 - msg.t0;
+      if (rtt < MP.bestSyncRtt){ MP.bestSyncRtt = rtt; MP.clockOffset = (msg.t1 + rtt / 2) - t2; }
     }
   }
 }
@@ -1238,7 +1254,7 @@ function broadcastStart(){
 }
 function startFromNetwork(msg){
   S.n = msg.n; S.time = msg.time; S.minLen = msg.minLen || 3; S.grid = msg.grid; S.bonus = msg.bonus;
-  S.startAt = msg.startAt || Date.now(); S.endAt = msg.endAt;
+  S.startAt = (msg.startAt || Date.now()) - MP.clockOffset; S.endAt = msg.endAt - MP.clockOffset;
   S.NB = buildNeighbors(S.n);
   beginRound();
 }
