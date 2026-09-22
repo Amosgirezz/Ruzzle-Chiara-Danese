@@ -755,15 +755,27 @@ function isSingleWord(s){
   return String(s).trim().split(/\s+/).filter(Boolean).length <= 1;
 }
 const DEF_TARGET_LEN = 8, DEF_MAX_LEN = 9;
+/* Riconosce le definizioni che sono in realtà "voci del verbo" (es. "prima
+   persona singolare del congiuntivo presente di leggere"): sono corrette ma
+   fanno un indizio povero, perché sono quasi sempre nella stessa forma.
+   Non vengono escluse del tutto (a volte è l'unico significato disponibile),
+   ma vengono usate solo se non si trova nient'altro di meglio. */
+const VERB_FORM_RE = /\b(persona\s+(singolare|plurale)|participio\s+(passato|presente)|gerundio|indicativo|congiuntivo|condizionale|imperativo)\b/i;
+function isVerbForm(s){ return VERB_FORM_RE.test(String(s)); }
 /* Recupera una breve definizione (circa 7-9 parole) per `word` da Wikizionario.
    Non ripiega mai sulla parola stessa: se non trova una definizione utilizzabile
    (o tutte le voci contengono la parola, rivelandola), restituisce null così il
    chiamante può scartare quella parola e sceglierne un'altra. */
 async function fetchDefinition(word){
   const rest = await fetchDefinitionRest(word);
-  if (rest) return rest;
-  return await fetchDefinitionWikitext(word);
+  if (rest && !isVerbForm(rest)) return rest;
+  const wt = await fetchDefinitionWikitext(word);
+  if (wt && !isVerbForm(wt)) return wt;
+  // Nessuna definizione "non voce verbale" trovata: meglio una voce del
+  // verbo che niente, quindi si usa la migliore disponibile tra le due.
+  return rest || wt;
 }
+
 /* Tentativo 1: endpoint REST /page/definition (ufficialmente documentato solo
    per l'inglese, ma a volte disponibile anche per altre lingue). */
 async function fetchDefinitionRest(word){
@@ -865,10 +877,18 @@ function extractWordList(wt, headingWords){
   return [];
 }
 function pickBestCandidate(candidates){
-  // Preferisce definizioni che rientrano già nel limite di parole senza
-  // bisogno di essere troncate: risultano più complete e naturali.
-  const fitting = candidates.filter(c => c.split(/\s+/).filter(Boolean).length <= DEF_MAX_LEN);
-  const pool = fitting.length ? fitting : candidates;
+  // Priorità: 1) non voce verbale + entro il limite di parole, 2) non voce
+  // verbale (anche se da troncare), 3) entro il limite (anche se voce
+  // verbale), 4) tutte. Si usa il primo gruppo non vuoto.
+  const fits = c => c.split(/\s+/).filter(Boolean).length <= DEF_MAX_LEN;
+  const notVerb = c => !isVerbForm(c);
+  const groups = [
+    candidates.filter(c => notVerb(c) && fits(c)),
+    candidates.filter(notVerb),
+    candidates.filter(fits),
+    candidates
+  ];
+  const pool = groups.find(g => g.length) || candidates;
   let best = pool[0], bestDiff = Infinity;
   for (const c of pool){
     const len = c.split(/\s+/).filter(Boolean).length;
