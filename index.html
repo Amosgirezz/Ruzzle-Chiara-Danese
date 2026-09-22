@@ -130,6 +130,19 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
   background:var(--saffron);color:var(--ink);padding:2px 10px;border-radius:99px;
 }
 .current .cp:empty{display:none}
+.def-target{
+  text-align:center;margin:0 0 10px;padding:10px 16px;background:var(--bg2);border-radius:14px;
+  font-size:.95rem;color:var(--muted);
+}
+.def-target b{font-family:var(--serif);font-weight:900;font-size:1.1rem;color:var(--saffron);letter-spacing:0;line-height:1.3}
+.def-progress{font-size:.78rem;color:var(--muted);margin-bottom:2px}
+.def-count-box{margin-top:16px;padding:16px;background:var(--bg2);border-radius:14px}
+ul.def-final{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+ul.def-final li{display:block;background:var(--bg2);border-radius:10px;padding:8px 12px;font-weight:600}
+ul.def-final li .row{display:flex;justify-content:space-between;align-items:center}
+ul.def-final li b{color:var(--saffron)}
+ul.def-final li .missed{margin:8px 0 0}
+ul.def-final li .missed li{background:var(--bg);font-weight:600}
 
 .board-wrap{width:100%;max-width:min(100%, calc(100dvh - 330px));min-width:min(100%,280px);margin:0 auto}
 @supports not (height:100dvh){.board-wrap{max-width:min(100%, calc(100vh - 330px))}}
@@ -175,7 +188,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 @keyframes shake{20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
 .board-count{
   position:absolute;inset:0;display:grid;place-items:center;z-index:6;
-  background:rgba(16,38,43,.85);border-radius:22px;backdrop-filter:blur(1px);
+  background:rgba(16,38,43,.94);border-radius:22px;backdrop-filter:blur(2px);
 }
 .board-count span{
   font-family:var(--serif);font-weight:900;color:var(--saffron);
@@ -183,6 +196,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
   animation:cd-pop .5s cubic-bezier(.2,.8,.3,1);
 }
 .board-count span.go{color:var(--good);font-size:clamp(36px,12cqw,64px)}
+.board-count span.winner{color:#fff;font-family:var(--sans);font-weight:800;font-size:clamp(22px,8cqw,36px);text-align:center;padding:0 12px;text-transform:uppercase;letter-spacing:.02em}
 @keyframes cd-pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
 .board.pop{animation:pop .2s}
 @keyframes pop{50%{transform:scale(1.015)}}
@@ -367,8 +381,28 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 
     <div class="start-row">
       <button class="btn" id="startBtn" type="button" disabled>Caricamento…</button>
+      <button class="btn" id="defModeBtn" type="button" disabled title="Modalità definizioni">Definizioni</button>
       <span id="recordLine" class="note"></span>
     </div>
+
+    <div class="def-count-box" id="defCountBox" hidden>
+      <fieldset class="seg" id="defCountSeg" style="grid-template-columns:repeat(4,1fr)">
+        <legend>Quante parole per decretare il vincitore?</legend>
+        <label><input type="radio" name="defCount" value="1"><span>1</span></label>
+        <label><input type="radio" name="defCount" value="3"><span>3</span></label>
+        <label><input type="radio" name="defCount" value="5" checked><span>5</span></label>
+        <label><input type="radio" name="defCount" value="7"><span>7</span></label>
+        <label><input type="radio" name="defCount" value="15"><span>15</span></label>
+        <label><input type="radio" name="defCount" value="25"><span>25</span></label>
+        <label><input type="radio" name="defCount" value="40"><span>40</span></label>
+      </fieldset>
+      <div class="start-row">
+        <button class="btn" id="defConfirmBtn" type="button">Inizia definizioni</button>
+        <button class="btn ghost" id="defCancelBtn" type="button">Annulla</button>
+      </div>
+    </div>
+
+    <div class="msg" id="msgSetup" aria-live="polite"></div>
 
     <div class="dict">
       <div class="st"><span class="dot load" id="dictDot"></span><span id="dictText">Carico il dizionario italiano…</span></div>
@@ -407,8 +441,27 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
     <ul class="players" id="lobbyPlayers"></ul>
     <div class="start-row">
       <button class="btn" id="lobbyStartBtn" type="button" hidden>Avvia partita</button>
+      <button class="btn" id="lobbyDefBtn" type="button" hidden title="Modalità definizioni">Definizioni</button>
       <button class="btn ghost" id="lobbyLeaveBtn" type="button">Esci dalla lobby</button>
     </div>
+
+    <div class="def-count-box" id="lobbyDefCountBox" hidden>
+      <fieldset class="seg" id="lobbyDefCountSeg" style="grid-template-columns:repeat(4,1fr)">
+        <legend>Quante parole per decretare il vincitore?</legend>
+        <label><input type="radio" name="lobbyDefCount" value="1"><span>1</span></label>
+        <label><input type="radio" name="lobbyDefCount" value="3"><span>3</span></label>
+        <label><input type="radio" name="lobbyDefCount" value="5" checked><span>5</span></label>
+        <label><input type="radio" name="lobbyDefCount" value="7"><span>7</span></label>
+        <label><input type="radio" name="lobbyDefCount" value="15"><span>15</span></label>
+        <label><input type="radio" name="lobbyDefCount" value="25"><span>25</span></label>
+        <label><input type="radio" name="lobbyDefCount" value="40"><span>40</span></label>
+      </fieldset>
+      <div class="start-row">
+        <button class="btn" id="lobbyDefConfirmBtn" type="button">Inizia definizioni</button>
+        <button class="btn ghost" id="lobbyDefCancelBtn" type="button">Annulla</button>
+      </div>
+    </div>
+    <div class="msg" id="msgLobby" aria-live="polite"></div>
     <p class="note" id="lobbyWait">In attesa che l'host avvii la partita…</p>
     <p class="note warn" id="lobbyErr" hidden></p>
   </section>
@@ -423,6 +476,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
         <button class="quit" id="quitBtn" type="button">Termina</button>
       </div>
       <div class="bar" id="bar" style="margin:12px 0 6px"><i id="barFill"></i></div>
+      <div class="def-target" id="defTargetBox" hidden><div class="def-progress" id="defProgress"></div>Definizione: <b id="defTargetWord"></b></div>
       <div class="current" aria-live="polite"><span class="cw hint" id="curWord"></span><span class="cp" id="curPts"></span></div>
       <div class="board-wrap">
         <div class="board" id="board"><div class="grid" id="grid"></div><div class="board-count" id="boardCount" hidden><span id="boardCountNum">3</span></div></div>
@@ -501,7 +555,9 @@ const LEN_BONUS = {5:3, 6:6, 7:10, 8:15};
 const S = {
   n:4, time:120, minLen:3, grid:[], bonus:[], path:[], typed:'',
   found:new Map(), score:0, startAt:0, endAt:0, running:false, dragging:false,
-  timer:null, countdownTimer:null, rects:[], NB:[], lastTickSec:null
+  timer:null, countdownTimer:null, rects:[], NB:[], lastTickSec:null,
+  defMode:false, defTarget:'', defFound:false, defWinnerId:null,
+  defWords:[], defClues:[], defWordTime:20, defRoundNum:0, defScores:new Map(), defHistory:[], defLastCount:null
 };
 const COUNTDOWN_MS = 3000;
 
@@ -646,12 +702,102 @@ function finishDictLoad(){
 }
 function enableStart(){
   const b = $('#startBtn'); b.disabled = false; b.textContent = 'Inizia la partita';
+  const d = $('#defModeBtn'); if (d) d.disabled = !dict.ready;
 }
 
 function isValidWord(w){
   if (dict.ready) return dict.set.has(w);
   // modalità permissiva: almeno una vocale e nessuna lettera ripetuta 3 volte
   return /[AEIOU]/.test(w) && !/(.)\1\1/.test(w);
+}
+
+/* ---------------- Definizioni (Wikizionario) ---------------- */
+function stripHtml(html){
+  return String(html)
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ').trim();
+}
+function truncateWords(s, n){
+  const parts = s.split(/\s+/).filter(Boolean);
+  if (parts.length <= n) return parts.join(' ');
+  return parts.slice(0, n).join(' ') + '…';
+}
+const DEF_TARGET_LEN = 8, DEF_MAX_LEN = 9;
+/* Recupera una breve definizione (circa 7-9 parole) per `word` da Wikizionario.
+   Non ripiega mai sulla parola stessa: se non trova una definizione utilizzabile
+   (o tutte le voci contengono la parola, rivelandola), restituisce null così il
+   chiamante può scartare quella parola e sceglierne un'altra. */
+async function fetchDefinition(word){
+  const rest = await fetchDefinitionRest(word);
+  if (rest) return rest;
+  return await fetchDefinitionWikitext(word);
+}
+/* Tentativo 1: endpoint REST /page/definition (ufficialmente documentato solo
+   per l'inglese, ma a volte disponibile anche per altre lingue). */
+async function fetchDefinitionRest(word){
+  try {
+    const url = 'https://it.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(word.toLowerCase());
+    const text = await fetchText(url, 4000);
+    const data = JSON.parse(text);
+    const entries = data.it;
+    if (!entries || !entries.length) return null;
+    const spoilerRe = new RegExp('(^|[^A-Z])' + word + '([^A-Z]|$)');
+    const candidates = [];
+    for (const e of entries){
+      for (const d of (e.definitions || [])){
+        const clean = stripHtml(d.definition || '');
+        if (clean && !spoilerRe.test(normalize(clean))) candidates.push(clean);
+      }
+    }
+    if (!candidates.length) return null;
+    return pickBestCandidate(candidates);
+  } catch (e) { return null; }
+}
+/* Tentativo 2 (fallback): scarica il wikitesto della voce dall'API classica di
+   MediaWiki (CORS abilitato con origin=*) ed estrae la prima riga "# ..."
+   della sezione italiana, ripulita dalla sintassi wiki. */
+async function fetchDefinitionWikitext(word){
+  try {
+    const url = 'https://it.wiktionary.org/w/api.php?action=parse&format=json&origin=*&redirects=1&prop=wikitext&page=' + encodeURIComponent(word.toLowerCase());
+    const text = await fetchText(url, 4000);
+    const data = JSON.parse(text);
+    const wt = data && data.parse && data.parse.wikitext && data.parse.wikitext['*'];
+    if (!wt) return null;
+    const spoilerRe = new RegExp('(^|[^A-Z])' + word + '([^A-Z]|$)');
+    const candidates = [];
+    for (const raw of wt.split('\n')){
+      const m = raw.match(/^#\s*([^#:*].*)/);
+      if (!m) continue;
+      let clean = m[1]
+        .replace(/\{\{[^{}]*\}\}/g, '')
+        .replace(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g, '$1')
+        .replace(/'''?/g, '')
+        .replace(/<[^>]+>/g, '')
+        .trim();
+      if (clean && !spoilerRe.test(normalize(clean))) candidates.push(clean);
+      if (candidates.length >= 8) break;
+    }
+    if (!candidates.length) return null;
+    return pickBestCandidate(candidates);
+  } catch (e) { return null; }
+}
+function pickBestCandidate(candidates){
+  let best = candidates[0], bestDiff = Infinity;
+  for (const c of candidates){
+    const len = c.split(/\s+/).filter(Boolean).length;
+    const diff = Math.abs(len - DEF_TARGET_LEN);
+    if (diff < bestDiff){ bestDiff = diff; best = c; }
+  }
+  return truncateWords(best, DEF_MAX_LEN);
+}
+/* Data una lista (ampia) di parole candidate, restituisce fino a `count` coppie
+   {word, def} con una vera definizione trovata, scartando le parole senza. */
+async function fetchDefinitionPairs(candidates, count){
+  const defs = await Promise.all(candidates.map(fetchDefinition));
+  const pairs = candidates.map((w, i) => ({ word: w, def: defs[i] })).filter(p => p.def);
+  return pairs.slice(0, count);
 }
 
 /* ---------------- Griglia ---------------- */
@@ -788,10 +934,10 @@ function updatePathUI(){
 
 let msgTimer = null;
 function toast(text, kind){
-  const m = $('#msg');
-  m.textContent = text; m.className = 'msg ' + (kind || '');
+  const targets = ['#msg', '#msgSetup', '#msgLobby'].map(sel => $(sel)).filter(Boolean);
+  for (const m of targets){ m.textContent = text; m.className = 'msg ' + (kind || ''); }
   clearTimeout(msgTimer);
-  msgTimer = setTimeout(() => { m.textContent = ''; m.className = 'msg'; }, 1800);
+  msgTimer = setTimeout(() => { for (const m of targets){ m.textContent = ''; m.className = 'msg'; } }, 1800);
 }
 function animate(cls){
   const b = $('#board'); b.classList.remove('shake', 'pop'); void b.offsetWidth; b.classList.add(cls);
@@ -800,6 +946,17 @@ function animate(cls){
 function submitPath(path){
   if (!path || !path.length) return;
   const word = pathWord(path);
+  if (S.defMode){
+    if (S.defFound) return;
+    if (word !== S.defTarget){ toast('Non è la parola giusta', 'bad'); animate('shake'); return; }
+    S.defFound = true;
+    flashTiles(path);
+    toast('Trovata! ' + word, 'ok');
+    if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} }
+    Snd.correct();
+    if (MP.active) MP.reportDefFound(); else defHostFinishRound(meId());
+    return;
+  }
   if (word.length < S.minLen){ toast(`Servono almeno ${S.minLen} lettere`, 'bad'); return; }
   if (S.found.has(word)){ toast('Parola già trovata', 'bad'); return; }
   if (!isValidWord(word)){ toast(word + ': parola non valida', 'bad'); return; }
@@ -814,11 +971,11 @@ function submitPath(path){
   if (MP.active) MP.reportWord(word, pts);
 }
 
-function flashTiles(path){
+function flashTiles(path, duration){
   const tiles = grid.querySelectorAll('.tile');
   const els = path.map(i => tiles[i]).filter(Boolean);
   els.forEach(el => el.classList.add('ok'));
-  setTimeout(() => els.forEach(el => el.classList.remove('ok')), 450);
+  setTimeout(() => els.forEach(el => el.classList.remove('ok')), duration || 450);
 }
 
 function addFoundChip(word, pts){
@@ -927,15 +1084,136 @@ function startGame(){
   storeSet('intreccio:settings', JSON.stringify({ n: S.n, time: S.time, minLen: S.minLen }));
   S.NB = buildNeighbors(S.n);
   S.grid = genGrid(S.n); S.bonus = genBonus(S.n);
+  S.defMode = false; S.defTarget = ''; S.defWinnerId = null; S.defWords = []; S.defLastCount = null;
   S.startAt = Date.now() + COUNTDOWN_MS;
   S.endAt = S.startAt + S.time * 1000;
   Snd.unlock();
   if (MP.active && MP.isHost) broadcastStart();
   beginRound();
 }
+/* ---------------- Modalità definizioni ---------------- */
+function shuffledSolvableWords(){
+  if (!dict.ready) return [];
+  const all = solveAll();
+  const words = [...all.keys()].filter(w => w.length >= Math.max(S.minLen, 3));
+  for (let i = words.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [words[i], words[j]] = [words[j], words[i]]; }
+  return words;
+}
+async function startDefinitionsGame(count){
+  readSettings();
+  storeSet('intreccio:settings', JSON.stringify({ n: S.n, time: S.time, minLen: S.minLen }));
+  S.NB = buildNeighbors(S.n);
+  S.grid = genGrid(S.n); S.bonus = genBonus(S.n);
+  const pool = shuffledSolvableWords();
+  if (!pool.length){ toast('Nessuna parola trovata sulla griglia: riprova', 'bad'); return; }
+  const busyBtns = [$('#defConfirmBtn'), $('#lobbyDefConfirmBtn')].filter(Boolean);
+  busyBtns.forEach(b => { b.disabled = true; });
+  toast('Preparo le definizioni…', '');
+  const BATCH = 12;
+  let pairs = [], offset = 0;
+  try {
+    while (pairs.length < count && offset < pool.length){
+      const batch = pool.slice(offset, offset + BATCH);
+      offset += batch.length;
+      pairs = pairs.concat(await fetchDefinitionPairs(batch, count - pairs.length));
+    }
+  } finally { busyBtns.forEach(b => { b.disabled = false; }); }
+  if (!pairs.length){ toast('Impossibile trovare definizioni: riprova', 'bad'); return; }
+  if (pairs.length < count) toast(`Trovate solo ${pairs.length} definizioni disponibili`, 'bad');
+  const words = pairs.map(p => p.word), clues = pairs.map(p => p.def);
+  S.defMode = true; S.defWordTime = 20; S.defWords = words; S.defClues = clues; S.defScores = new Map(); S.defHistory = [];
+  S.defRoundNum = 0; S.defTarget = words[0]; S.defFound = false; S.defWinnerId = null;
+  S.defLastCount = count;
+  S.startAt = Date.now() + COUNTDOWN_MS;
+  S.endAt = S.startAt + S.defWordTime * 1000;
+  Snd.unlock();
+  if (MP.active && MP.isHost) broadcastStart();
+  beginRound();
+}
+/* "Gioca ancora": ripete la stessa modalità appena conclusa (definizioni con
+   lo stesso numero di parole, oppure partita normale). */
+function playAgain(){
+  if (S.defMode || S.defLastCount){ startDefinitionsGame(S.defLastCount || 5); }
+  else { startGame(); }
+}
+/* Chiamata quando il round della parola corrente termina (vinto o scaduto).
+   È autoritativa: la esegue solo chi decide, cioè il giocatore in solitaria
+   o l'host in multigiocatore; gli altri ricevono il risultato via rete. */
+function defHostFinishRound(winnerId){
+  if (!S.roundActive) return;
+  S.roundActive = false; S.running = false; clearInterval(S.timer); clearInterval(S.countdownTimer);
+  S.dragging = false; S.path = []; S.typed = ''; updatePathUI();
+  const word = S.defTarget;
+  if (winnerId) S.defScores.set(winnerId, (S.defScores.get(winnerId) || 0) + 1);
+  const nextIndex = S.defRoundNum + 1;
+  const done = nextIndex >= S.defWords.length;
+  const startAt = done ? 0 : Date.now() + 3000;
+  const endAt = done ? 0 : startAt + S.defWordTime * 1000;
+  const payload = { roundNum: nextIndex, word, winnerId: winnerId || null, scores: [...S.defScores.entries()], startAt, endAt, done };
+  if (MP.active && MP.isHost) for (const conn of MP.conns.values()) conn.send({ type:'defRound', payload });
+  defApplyRoundResult(payload);
+}
+/* Applica il risultato del round appena concluso e prepara il successivo
+   (o la schermata finale). Usata sia in locale sia ricevendo dati dall'host. */
+function defApplyRoundResult(p){
+  S.defScores = new Map(p.scores);
+  S.defHistory.push({ word: p.word, winnerId: p.winnerId || null });
+  const nameOf = id => id === meId() ? 'Tu' : ((MP.players.get(id) || {}).name || 'Un giocatore');
+  const name = p.winnerId ? nameOf(p.winnerId) : null;
+  toast(name ? `${p.word} — ${name}` : `Tempo scaduto: ${p.word}`, name ? 'ok' : 'bad');
+  if (p.done){ setTimeout(defFinishGame, 3000); return; }
+  S.defRoundNum = p.roundNum;
+  S.defTarget = S.defWords[p.roundNum];
+  S.defFound = false; S.defWinnerId = null;
+  S.startAt = p.startAt; S.endAt = p.endAt;
+  $('#defTargetWord').textContent = S.defClues[p.roundNum] || S.defTarget;
+  $('#defProgress').textContent = `Parola ${p.roundNum + 1} di ${S.defWords.length}`;
+  S.dragging = false; S.path = []; S.typed = ''; updatePathUI();
+  S.roundActive = true;
+  clearInterval(S.timer); clearInterval(S.countdownTimer);
+  startCountdown(p.word + (name ? ' — ' + name : ''));
+}
+function defFinishGame(){
+  S.roundActive = false;
+  renderBoardRef(); highlightBoardRefPath(null);
+  $('#missedBox').hidden = true; $('#lbBox').hidden = true;
+  const nameOf = id => id === meId() ? 'Tu' : ((MP.players.get(id) || {}).name || 'Giocatore');
+  const wordsByPlayer = new Map();
+  for (const h of S.defHistory){
+    if (!h.winnerId) continue;
+    if (!wordsByPlayer.has(h.winnerId)) wordsByPlayer.set(h.winnerId, []);
+    wordsByPlayer.get(h.winnerId).push(h.word);
+  }
+  const entries = [...S.defScores.entries()].sort((a, b) => b[1] - a[1]);
+  const top = entries.length ? entries[0][1] : 0;
+  const winners = entries.filter(([, c]) => c === top && top > 0).map(([id]) => nameOf(id));
+  $('#overScore').textContent = '';
+  $('#overRecord').innerHTML = '';
+  const list = entries.length
+    ? '<ul class="def-final">' + entries.map(([id, c]) => {
+        const words = wordsByPlayer.get(id) || [];
+        const wordsHtml = words.length
+          ? '<ul class="missed">' + words.map(w => `<li>${escapeHtml(w)}</li>`).join('') + '</ul>'
+          : '';
+        return `<li><div class="row">${escapeHtml(nameOf(id))}<b>${c}</b></div>${wordsHtml}</li>`;
+      }).join('') + '</ul>'
+    : '<p>Nessuno ha trovato parole.</p>';
+  $('#overStats').innerHTML = (winners.length
+    ? (winners.length > 1 ? `Pareggio tra <b>${winners.map(escapeHtml).join(', ')}</b>.` : `Ha vinto <b>${escapeHtml(winners[0])}</b>.`)
+    : 'Nessun vincitore: nessuna parola trovata.') + list;
+  $('#overRest').hidden = false;
+  updateOverActions();
+  $('#over').hidden = false;
+  $('#againBtn').focus();
+}
 function beginRound(){
   S.path = []; S.typed = ''; S.found = new Map(); S.score = 0; S.dragging = false;
-  S.running = false; S.roundActive = true; S.lastTickSec = null;
+  S.running = false; S.roundActive = true; S.lastTickSec = null; S.defFound = false;
+  $('#defTargetBox').hidden = !S.defMode;
+  if (S.defMode){
+    $('#defTargetWord').textContent = S.defClues[S.defRoundNum] || S.defTarget;
+    $('#defProgress').textContent = `Parola ${S.defRoundNum + 1} di ${S.defWords.length}`;
+  }
 
   $('#setup').hidden = true; $('#lobby').hidden = true; $('#over').hidden = true; $('#game').hidden = false;
   clearTimeout(revealScheduleId); clearTimeout(revealTimerId); revealFastForward = null;
@@ -946,7 +1224,7 @@ function beginRound(){
   $('#found').innerHTML = ''; $('#foundEmpty').hidden = false; $('#foundCount').textContent = '0';
   $('#msg').textContent = '';
   $('#permNote').hidden = dict.ready;
-  $('#timeVal').textContent = fmt(S.time);
+  $('#timeVal').textContent = fmt(S.defMode ? S.defWordTime : S.time);
   $('#barFill').style.width = '100%';
   $('#timeBox').classList.remove('low'); $('#bar').classList.remove('low');
   if (MP.active) mpResetRound();
@@ -954,14 +1232,23 @@ function beginRound(){
   clearInterval(S.timer); clearInterval(S.countdownTimer);
   startCountdown();
 }
-function startCountdown(){
+function startCountdown(revealText){
   const box = $('#boardCount'), num = $('#boardCountNum');
   box.hidden = false;
   let shown = null;
+  if (revealText){ num.textContent = revealText; num.className = 'winner'; }
   function upd(){
     const remain = S.startAt - Date.now();
-    if (remain <= 250){
+    const threshold = revealText ? 0 : 250;
+    if (remain <= threshold){
       clearInterval(S.countdownTimer);
+      if (revealText){
+        box.hidden = true;
+        S.running = true; S.lastTickSec = null;
+        tick();
+        clearInterval(S.timer); S.timer = setInterval(tick, 100);
+        return;
+      }
       num.textContent = 'Via!'; num.className = 'go';
       setTimeout(() => {
         box.hidden = true;
@@ -971,29 +1258,43 @@ function startCountdown(){
       }, remain > 0 ? remain : 0);
       return;
     }
-    const n = Math.ceil(remain / 1000);
-    if (n !== shown){
-      shown = n;
-      num.textContent = String(n); num.className = '';
-      void num.offsetWidth; num.style.animation = 'none'; void num.offsetWidth; num.style.animation = '';
-      Snd.beep(n <= 1);
+    if (!revealText){
+      const n = Math.ceil(remain / 1000);
+      if (n !== shown){
+        shown = n;
+        num.textContent = String(n); num.className = '';
+        void num.offsetWidth; num.style.animation = 'none'; void num.offsetWidth; num.style.animation = '';
+        Snd.beep(n <= 1);
+      }
+    } else {
+      const n = Math.ceil(remain / 1000);
+      if (n !== shown){
+        shown = n;
+        Snd.beep(n <= 1);
+      }
     }
   }
   upd();
   S.countdownTimer = setInterval(upd, 100);
 }
 function tick(){
+  const total = S.defMode ? S.defWordTime * 1000 : S.time * 1000;
   const ms = Math.max(0, S.endAt - Date.now());
   const sec = Math.ceil(ms / 1000);
   $('#timeVal').textContent = fmt(sec);
-  $('#barFill').style.width = (ms / (S.time * 1000) * 100) + '%';
-  const low = sec <= 10;
+  $('#barFill').style.width = (ms / total * 100) + '%';
+  const lowAt = S.defMode ? 3 : 10;
+  const low = sec <= lowAt;
   $('#timeBox').classList.toggle('low', low); $('#bar').classList.toggle('low', low);
   if (low && sec >= 1 && sec !== S.lastTickSec){
     S.lastTickSec = sec;
-    Snd.beep(sec <= 5);
+    Snd.beep(sec <= (S.defMode ? 1 : 5));
   }
-  if (ms <= 0) endGame();
+  if (ms <= 0){
+    clearInterval(S.timer);
+    if (S.defMode){ if (!MP.active || MP.isHost) defHostFinishRound(null); }
+    else endGame();
+  }
 }
 
 function renderBoardRef(){
@@ -1041,6 +1342,8 @@ function endGame(){
   $('#boardCount').hidden = true;
   S.dragging = false; S.path = []; S.typed = ''; updatePathUI();
   Snd.buzz();
+
+  if (S.defMode){ defFinishGame(); return; }
 
   const prev = +storeGet(recKey()) || 0;
   const isRecord = S.score > prev && S.score > 0;
@@ -1240,6 +1543,10 @@ function handleData(conn, msg){
       broadcastPlayers();
     } else if (msg.type === 'sync'){
       conn.send({ type:'syncAck', t0: msg.t0, t1: Date.now() });
+    } else if (msg.type === 'foundDef'){
+      if (S.roundActive && S.defMode && msg.roundNum === S.defRoundNum){
+        defHostFinishRound(conn.peer);
+      }
     }
   } else {
     if (msg.type === 'players'){
@@ -1255,6 +1562,11 @@ function handleData(conn, msg){
       else $('#overRest').hidden = false;
     } else if (msg.type === 'revealSkip'){
       triggerRevealSkip();
+    } else if (msg.type === 'defRound'){
+      clearInterval(S.timer); clearInterval(S.countdownTimer);
+      const p = Object.assign({}, msg.payload);
+      if (!p.done){ p.startAt -= MP.clockOffset; p.endAt -= MP.clockOffset; }
+      defApplyRoundResult(p);
     } else if (msg.type === 'syncAck'){
       const t2 = Date.now(), rtt = t2 - msg.t0;
       if (rtt < MP.bestSyncRtt){ MP.bestSyncRtt = rtt; MP.clockOffset = (msg.t1 + rtt / 2) - t2; }
@@ -1276,6 +1588,7 @@ function renderLobbyPlayers(){
   }).join('');
   $('#lobbyPlayers').innerHTML = rows || '<li class="empty">Nessun giocatore.</li>';
   $('#lobbyStartBtn').hidden = !MP.isHost;
+  $('#lobbyDefBtn').hidden = !MP.isHost;
   $('#lobbyWait').hidden = MP.isHost;
 }
 function showLobby(){
@@ -1293,14 +1606,27 @@ function leaveLobby(){
 }
 function broadcastStart(){
   for (const conn of MP.conns.values())
-    conn.send({ type:'start', n:S.n, time:S.time, minLen:S.minLen, grid:S.grid, bonus:S.bonus, startAt:S.startAt, endAt:S.endAt });
+    conn.send({ type:'start', n:S.n, time:S.time, minLen:S.minLen, grid:S.grid, bonus:S.bonus, startAt:S.startAt, endAt:S.endAt, defMode:S.defMode, defWords:S.defWords, defClues:S.defClues, defWordTime:S.defWordTime });
 }
 function startFromNetwork(msg){
   S.n = msg.n; S.time = msg.time; S.minLen = msg.minLen || 3; S.grid = msg.grid; S.bonus = msg.bonus;
   S.startAt = (msg.startAt || Date.now()) - MP.clockOffset; S.endAt = msg.endAt - MP.clockOffset;
+  S.defMode = !!msg.defMode;
+  if (S.defMode){
+    S.defWords = msg.defWords || []; S.defClues = msg.defClues || S.defWords; S.defWordTime = msg.defWordTime || 20;
+    S.defRoundNum = 0; S.defTarget = S.defWords[0] || ''; S.defScores = new Map(); S.defWinnerId = null; S.defHistory = [];
+  } else { S.defWords = []; S.defClues = []; }
   S.NB = buildNeighbors(S.n);
   beginRound();
 }
+function mpReportDefFound(){
+  if (MP.isHost){
+    if (S.roundActive && S.defMode) defHostFinishRound(MP.myId);
+  } else if (MP.hostConn){
+    MP.hostConn.send({ type:'foundDef', roundNum: S.defRoundNum });
+  }
+}
+MP.reportDefFound = mpReportDefFound;
 function mpResetRound(){
   if (MP.isHost) for (const p of MP.players.values()) p.words = new Map();
 }
@@ -1517,7 +1843,7 @@ $('#createLobbyBtn').addEventListener('click', createLobby);
 $('#joinLobbyBtn').addEventListener('click', joinLobby);
 $('#lobbyStartBtn').addEventListener('click', startGame);
 $('#lobbyLeaveBtn').addEventListener('click', leaveLobby);
-$('#againBtn').addEventListener('click', startGame);
+$('#againBtn').addEventListener('click', playAgain);
 $('#menuBtn').addEventListener('click', () => {
   $('#over').hidden = true; $('#game').hidden = true;
   if (MP.active){ $('#lobby').hidden = false; renderLobbyPlayers(); }
@@ -1533,6 +1859,20 @@ $('#over').addEventListener('click', e => {
   document.querySelectorAll('#over li[data-word].active').forEach(x => x.classList.remove('active'));
   li.classList.add('active');
   $('#boardRef').scrollIntoView({ behavior:'smooth', block:'center' });
+});
+$('#defModeBtn').addEventListener('click', () => { $('#defCountBox').hidden = false; });
+$('#defCancelBtn').addEventListener('click', () => { $('#defCountBox').hidden = true; });
+$('#defConfirmBtn').addEventListener('click', () => {
+  const n = +document.querySelector('input[name=defCount]:checked').value;
+  $('#defCountBox').hidden = true;
+  startDefinitionsGame(n);
+});
+$('#lobbyDefBtn').addEventListener('click', () => { $('#lobbyDefCountBox').hidden = false; });
+$('#lobbyDefCancelBtn').addEventListener('click', () => { $('#lobbyDefCountBox').hidden = true; });
+$('#lobbyDefConfirmBtn').addEventListener('click', () => {
+  const n = +document.querySelector('input[name=lobbyDefCount]:checked').value;
+  $('#lobbyDefCountBox').hidden = true;
+  startDefinitionsGame(n);
 });
 $('#muteBtn').addEventListener('click', () => {
   const m = Snd.toggleMute();
