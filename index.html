@@ -438,24 +438,26 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
       </div>
       <ul class="reveal-log" id="revealLog"></ul>
     </div>
-    <div class="big" id="overScore">0</div>
-    <p id="overRecord"></p>
-    <p id="overStats"></p>
-    <h3>Griglia della partita</h3>
-    <div class="board-ref" id="boardRef"></div>
-    <div id="overFoundBox">
-      <h3>Le tue parole <span id="overFoundCount"></span></h3>
-      <ul class="missed" id="overFound"></ul>
-    </div>
-    <div id="missedBox" hidden>
-      <h3>Le 10 parole più lunghe disponibili</h3>
-      <p id="missedInfo"></p>
-      <ul class="missed" id="missed"></ul>
-    </div>
-    <div id="lbBox" hidden>
-      <h3>Classifica</h3>
-      <p class="note" id="lbNote"></p>
-      <ol class="leaderboard" id="leaderboard"></ol>
+    <div id="overRest" hidden>
+      <div class="big" id="overScore">0</div>
+      <p id="overRecord"></p>
+      <p id="overStats"></p>
+      <h3>Griglia della partita</h3>
+      <div class="board-ref" id="boardRef"></div>
+      <div id="overFoundBox">
+        <h3>Le tue parole <span id="overFoundCount"></span></h3>
+        <ul class="missed" id="overFound"></ul>
+      </div>
+      <div id="missedBox" hidden>
+        <h3>Le 10 parole più lunghe disponibili</h3>
+        <p id="missedInfo"></p>
+        <ul class="missed" id="missed"></ul>
+      </div>
+      <div id="lbBox" hidden>
+        <h3>Classifica</h3>
+        <p class="note" id="lbNote"></p>
+        <ol class="leaderboard" id="leaderboard"></ol>
+      </div>
     </div>
     <div class="actions">
       <button class="btn" id="againBtn" type="button">Gioca ancora</button>
@@ -1022,6 +1024,7 @@ function endGame(){
     : '<li class="empty-note">Nessuna parola trovata.</li>';
   $('#missedBox').hidden = true;
   $('#lbBox').hidden = true;
+  $('#overRest').hidden = true;
   updateOverActions();
   $('#over').hidden = false;
   $('#againBtn').focus();
@@ -1201,7 +1204,8 @@ function handleData(conn, msg){
     } else if (msg.type === 'final'){
       renderLeaderboard(msg.lb, (msg.bonusWords && msg.bonusWords[MP.myId]) || []);
       if (msg.words) renderPlayerWords(msg.lb, msg.words);
-      if (msg.lb && msg.lb.length >= 1 && msg.words) scheduleReveal(msg.words, msg.lb, msg.revealStartAt);
+      if (msg.lb && msg.lb.length >= 1 && msg.words && msg.words.length) scheduleReveal(msg.words, msg.lb, msg.revealStartAt);
+      else $('#overRest').hidden = false;
     } else if (msg.type === 'revealSkip'){
       triggerRevealSkip();
     }
@@ -1330,6 +1334,7 @@ function startReveal(words, lb, baseAt){
     }
     $('#revealWordText').classList.remove('show');
     $('#revealSkip').hidden = true;
+    $('#overRest').hidden = false;
   }
   function applyWord(w, animate){
     if (animate){
@@ -1403,6 +1408,7 @@ function soloOnRoundEnd(){
   renderLeaderboard(lb, bonusWords[SOLO_ID]);
   renderPlayerWords(lb, words);
   if (words.length) scheduleReveal(words, lb, revealStartAt);
+  else $('#overRest').hidden = false;
 }
 function mpOnRoundEnd(){
   if (MP.isHost){
@@ -1411,9 +1417,11 @@ function mpOnRoundEnd(){
     for (const conn of MP.conns.values()) conn.send({ type:'final', lb, bonusWords, words, revealStartAt });
     renderLeaderboard(lb, bonusWords[MP.myId]);
     renderPlayerWords(lb, words);
-    if (lb.length >= 1) scheduleReveal(words, lb, revealStartAt);
+    if (lb.length >= 1 && words.length) scheduleReveal(words, lb, revealStartAt);
+    else $('#overRest').hidden = false;
   } else {
     $('#lbBox').hidden = false;
+    $('#overRest').hidden = false;
     $('#lbNote').textContent = "In attesa dei punteggi finali dall'host…";
     $('#leaderboard').innerHTML = '';
   }
