@@ -309,6 +309,12 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
 .rb-row.p2 .rb-fill{background:var(--sky)}
 .rb-row.p3 .rb-fill{background:var(--coral)}
 .rb-row.p4 .rb-fill{background:var(--good)}
+.rb-row{border-radius:10px;transition:background .25s,box-shadow .25s;padding:2px 4px;margin:-2px -4px}
+.rb-row.active{background:rgba(245,184,61,.14);box-shadow:0 0 0 2px var(--saffron) inset}
+.rb-row.active .rb-top span:first-child{color:var(--saffron)}
+.reveal-progress{display:flex;align-items:center;gap:10px}
+.reveal-progress .bar{flex:1}
+.reveal-progress-label{font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
 .reveal-word{min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
 .rw-text{
   font-family:var(--serif);font-weight:900;font-size:clamp(30px,8vw,52px);letter-spacing:.03em;
@@ -438,6 +444,7 @@ legend{font-weight:600;margin-bottom:10px;padding:0}
     <h2 id="overTitle">Tempo scaduto</h2>
     <div id="revealBox" hidden>
       <h3>Confronto parole in diretta <button class="btn ghost small" id="revealSkip" type="button" hidden>Velocizza per tutti ▶▶</button></h3>
+      <div class="reveal-progress"><div class="bar"><i id="revealProgressFill"></i></div><span class="reveal-progress-label" id="revealProgressLabel">0 / 0</span></div>
       <div class="reveal-bars" id="revealBars"></div>
       <div class="reveal-word">
         <span class="rw-text" id="revealWordText"></span>
@@ -933,6 +940,7 @@ function beginRound(){
   $('#setup').hidden = true; $('#lobby').hidden = true; $('#over').hidden = true; $('#game').hidden = false;
   clearTimeout(revealScheduleId); clearTimeout(revealTimerId); revealFastForward = null;
   $('#revealBox').hidden = true; $('#revealLog').innerHTML = ''; $('#revealBars').innerHTML = '';
+  { const f = $('#revealProgressFill'), l = $('#revealProgressLabel'); if (f) f.style.width = '0%'; if (l) l.textContent = '0 / 0'; }
   $('#revealWordText').textContent = ''; $('#revealWordText').classList.remove('show'); $('#revealWordTags').innerHTML = '';
   $('#score').textContent = '0';
   $('#found').innerHTML = ''; $('#foundEmpty').hidden = false; $('#foundCount').textContent = '0';
@@ -1330,7 +1338,10 @@ function computeFinal(players = MP.players, solo = false){
     const entries = ids.map(id => ({ id, pts: players.get(id).words.get(w) }));
     const total = entries.reduce((s, e) => s + (uniq ? e.pts * 2 : e.pts), 0);
     return { word: w, uniq, entries, total };
-  }).sort((a, b) => a.total - b.total || a.word.localeCompare(b.word));
+  }).sort((a, b) => {
+    const ac = a.entries.length > 1 ? 0 : 1, bc = b.entries.length > 1 ? 0 : 1;
+    return ac - bc || a.total - b.total || a.word.localeCompare(b.word);
+  });
   return { lb, bonusWords, words };
 }
 function renderLeaderboard(lb, myBonusWords){
@@ -1354,7 +1365,7 @@ function startReveal(words, lb, baseAt){
   const maxScore = Math.max(1, ...lb.map(p => p.score));
 
   $('#revealBars').innerHTML = order.map((id, i) =>
-    `<div class="rb-row p${i + 1}"><div class="rb-top"><span>${escapeHtml(names.get(id))}</span>` +
+    `<div class="rb-row p${i + 1}" data-pid="${id}"><div class="rb-top"><span>${escapeHtml(names.get(id))}</span>` +
     `<span class="rb-score" id="rbScore-${id}">0</span></div>` +
     `<div class="rb-track"><div class="rb-fill" id="rbFill-${id}" style="width:0%"></div></div></div>`).join('');
   $('#revealLog').innerHTML = '';
@@ -1362,6 +1373,21 @@ function startReveal(words, lb, baseAt){
   $('#revealWordTags').innerHTML = '';
   $('#revealBox').hidden = false;
   $('#revealSkip').hidden = !(MP.isHost || !MP.active);
+
+  function updateProgress(done){
+    const total = words.length;
+    const fill = $('#revealProgressFill'), label = $('#revealProgressLabel');
+    if (fill) fill.style.width = (total ? done / total * 100 : 100) + '%';
+    if (label) label.textContent = done + ' / ' + total;
+  }
+  function highlightRows(ids){
+    document.querySelectorAll('#revealBars .rb-row.active').forEach(el => el.classList.remove('active'));
+    for (const id of ids){
+      const row = document.querySelector('#revealBars .rb-row[data-pid="' + id + '"]');
+      if (row) row.classList.add('active');
+    }
+  }
+  updateProgress(0);
 
   let i = 0;
   function finish(){
@@ -1373,6 +1399,8 @@ function startReveal(words, lb, baseAt){
     $('#revealWordText').classList.remove('show');
     $('#revealSkip').hidden = true;
     $('#revealLog').innerHTML = '';
+    highlightRows([]);
+    updateProgress(words.length);
     highlightBoardRefPath(null);
     $('#overRest').hidden = false;
   }
@@ -1382,6 +1410,7 @@ function startReveal(words, lb, baseAt){
       $('#revealWordText').classList.remove('show'); void $('#revealWordText').offsetWidth; $('#revealWordText').classList.add('show');
       $('#revealWordTags').innerHTML = w.entries.map(e =>
         `<span class="${e.id === meId() ? 'mine' : ''}${w.uniq ? ' x2b' : ''}">${escapeHtml(names.get(e.id) || '?')} +${w.uniq ? e.pts * 2 : e.pts}${w.uniq ? ' ×2' : ''}</span>`).join('');
+      highlightRows(w.entries.map(e => e.id));
       highlightBoardRefPath(findBestPath(w.word));
     }
     for (const e of w.entries){
@@ -1402,12 +1431,14 @@ function startReveal(words, lb, baseAt){
     clearTimeout(revealTimerId);
     while (i < words.length) applyWord(words[i++], false);
     $('#revealWordTags').innerHTML = '';
+    updateProgress(i);
     finish();
   };
   function step(){
     if (revealSkip){ return; }
     if (i >= words.length){ finish(); return; }
     applyWord(words[i++], true);
+    updateProgress(i);
     if (i >= words.length){ finish(); return; }
     const wait = Math.max(0, revealBaseAt + i * REVEAL_STEP_MS - Date.now());
     revealTimerId = setTimeout(step, wait);
